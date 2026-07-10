@@ -13,13 +13,25 @@ export interface CotizacionInput {
   detalles: DetalleCotizacionInput[];
 }
 
+export interface DetalleCotizacionResponse {
+  id: number;
+  cantidad: number;
+  precioUnitario: number;
+  producto: {
+    id: number;
+    codigoSku: string;
+    nombre: string;
+    precioVenta: number;
+  };
+}
+
 export interface CotizacionResponse {
   id: number;
   clienteNombre: string;
   clienteDocumento: string;
   fecha: string;
   total: number;
-  detalles: any[];
+  detalles: DetalleCotizacionResponse[];
 }
 
 export const cotizacionService = {
@@ -43,8 +55,8 @@ export const cotizacionService = {
 
   // GET: Traer el historial completo si lo necesitas después
   listar: async (): Promise<CotizacionResponse[]> => {
-    const response = await fetch(API_URL, { cache: 'no-store' });
+    const response = await fetch(API_URL, { cache: "no-store" });
     if (!response.ok) throw new Error("Error al obtener el historial");
     return response.json();
-  }
+  },
 };
