@@ -4,8 +4,9 @@ import React, { useEffect, useState } from "react";
 import { productoService, Producto } from "@/services/productoService";
 import { cotizacionService, CotizacionInput } from "@/services/cotizacionService";
 import { Plus, Trash2, FileText, User, ShoppingBag } from "lucide-react";
-import { PDFDownloadLink } from "@react-pdf/renderer";
-import CotizacionPDF from "./components/CotizacionPDF";
+import { DescargarPDFButton } from "@/components/cotizacion/DescargarPDFButton";
+import { FacturaCabeceraTable } from "@/components/cotizacion/FacturaCabeceraTable";
+import { ClienteData, CotizacionItem, FacturaCabecera } from "@/types/cotizacion";
 
 interface CarritoItem {
   id: number;
@@ -19,16 +20,18 @@ interface CarritoItem {
 
 interface CotizacionEmitidaData {
   id: number;
-  clienteNombre: string;
-  clienteDocumento: string;
+  cliente: ClienteData;
+  cabecera: FacturaCabecera;
   horaEmision: string;
-  items: CarritoItem[];
+  items: CotizacionItem[];
   totalNeto: number;
 }
 
 export default function NuevaCotizacionPage() {
   const [clienteNombre, setClienteNombre] = useState("");
   const [clienteDocumento, setClienteDocumento] = useState("");
+  const [clienteDireccion, setClienteDireccion] = useState("");
+  const [clienteTelefono, setClienteTelefono] = useState("");
 
   const [productos, setProductos] = useState<Producto[]>([]);
   const [productoSeleccionadoId, setProductoSeleccionadoId] = useState<string>("");
@@ -39,7 +42,14 @@ export default function NuevaCotizacionPage() {
   const [loading, setLoading] = useState(false);
   const [cotizacionEmitida, setCotizacionEmitida] = useState<CotizacionEmitidaData | null>(null);
 
-  // Carga inicial de productos
+  // Estado para la cabecera de factura
+  const [cabeceraFactura, setCabeceraFactura] = useState<FacturaCabecera>({
+    fechaEmision: new Date().toLocaleDateString("es-PE"),
+    fechaVencimiento: new Date().toLocaleDateString("es-PE"),
+    condicionPago: "CONTADO",
+    moneda: "SOLES",
+  });
+
   useEffect(() => {
     productoService
       .listar()
@@ -110,6 +120,19 @@ export default function NuevaCotizacionPage() {
 
   const totalNeto = carrito.reduce((sum, item) => sum + item.precioVenta * item.cantidad, 0);
 
+  // Convertir carrito a items de cotización para el PDF
+  const itemsParaPDF = (): CotizacionItem[] => {
+    return carrito.map((item, index) => ({
+      item: index + 1,
+      codigo: item.codigoSku,
+      cantidad: item.cantidad,
+      unidad: item.unidadMedida,
+      descripcion: item.nombre,
+      precioVenta: item.precioVenta,
+      importe: item.precioVenta * item.cantidad,
+    }));
+  };
+
   const manejarEnviarCotizacion = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!clienteNombre || carrito.length === 0) {
@@ -140,18 +163,34 @@ export default function NuevaCotizacionPage() {
       const exito = await cotizacionService.guardar(payload);
       alert(`¡Cotización N° ${exito.id} emitida con éxito!`);
 
+      const clienteData: ClienteData = {
+        nombre: clienteNombre,
+        ruc: clienteDocumento || "N/A",
+        direccion: clienteDireccion || "N/A",
+        telefono: clienteTelefono || "N/A",
+      };
+
       setCotizacionEmitida({
         id: exito.id,
-        clienteNombre,
-        clienteDocumento,
+        cliente: clienteData,
+        cabecera: cabeceraFactura,
         horaEmision: horaExactaStr,
-        items: carrito,
+        items: itemsParaPDF(),
         totalNeto,
       });
 
       setClienteNombre("");
       setClienteDocumento("");
+      setClienteDireccion("");
       setCarrito([]);
+
+      // Resetear cabecera
+      setCabeceraFactura({
+        fechaEmision: new Date().toLocaleDateString("es-PE"),
+        fechaVencimiento: new Date().toLocaleDateString("es-PE"),
+        condicionPago: "CONTADO",
+        moneda: "SOLES",
+      });
 
       const nuevoInventario = await productoService.listar();
       setProductos(nuevoInventario);
@@ -180,7 +219,7 @@ export default function NuevaCotizacionPage() {
             <User className="h-4 w-4 text-emerald-600" />
             <span>Información del Cliente</span>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-500 mb-1">
                 Nombre / Razón Social
@@ -206,7 +245,36 @@ export default function NuevaCotizacionPage() {
                 onChange={(e) => setClienteDocumento(e.target.value)}
               />
             </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">
+                Dirección
+              </label>
+              <input
+                type="text"
+                className="w-full p-2.5 text-sm border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                placeholder="Ej. Av. Los Olivos 123"
+                value={clienteDireccion}
+                onChange={(e) => setClienteDireccion(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">
+                Teléfono
+              </label>
+              <input
+                type="text"
+                className="w-full p-2.5 text-sm border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                placeholder="Ej. 987 654 321"
+                value={clienteTelefono}
+                onChange={(e) => setClienteTelefono(e.target.value)}
+              />
+            </div>
           </div>
+        </div>
+
+        {/* 🔥 TABLA DE CABECERA DE FACTURA (FECHA, VENCIMIENTO, CONDICIÓN, MONEDA) */}
+        <div className="bg-white border border-slate-200 rounded-none shadow-none">
+          <FacturaCabeceraTable cabecera={cabeceraFactura} />
         </div>
 
         {/* Selección de productos */}
@@ -360,22 +428,15 @@ export default function NuevaCotizacionPage() {
             </p>
           </div>
 
-          <PDFDownloadLink
-            document={
-              <CotizacionPDF
-                cotizacionId={cotizacionEmitida.id}
-                clienteNombre={cotizacionEmitida.clienteNombre}
-                clienteDocumento={cotizacionEmitida.clienteDocumento}
-                horaEmision={cotizacionEmitida.horaEmision}
-                items={cotizacionEmitida.items}
-                totalNeto={cotizacionEmitida.totalNeto}
-              />
-            }
+          <DescargarPDFButton
+            cotizacionId={cotizacionEmitida.id}
+            cliente={cotizacionEmitida.cliente}
+            cabecera={cotizacionEmitida.cabecera}
+            items={cotizacionEmitida.items}
+            fechaEmision={cotizacionEmitida.cabecera.fechaEmision}
+            horaEmision={cotizacionEmitida.horaEmision}
             fileName={`Cotizacion_Nro_${cotizacionEmitida.id}.pdf`}
-            className="bg-emerald-600 text-white text-xs font-bold px-4 py-2.5 rounded-lg hover:bg-emerald-700 transition shadow-sm"
-          >
-            {({ loading }) => (loading ? "Estructurando Reporte..." : "📥 Descargar PDF Oficial")}
-          </PDFDownloadLink>
+          />
         </div>
       )}
     </div>
