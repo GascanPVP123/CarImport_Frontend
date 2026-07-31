@@ -1,4 +1,4 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL!;
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://carimportbackend-production.up.railway.app/api";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
 
