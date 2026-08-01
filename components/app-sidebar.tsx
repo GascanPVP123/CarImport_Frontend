@@ -6,7 +6,6 @@ import {
   Package,
   FileText,
   ShoppingCart,
-  BarChart3,
   LogOut,
   Truck,
   Wallet,
@@ -58,12 +57,6 @@ const data = {
       title: "Finanzas",
       items: [
         { title: "Cuentas Corrientes", url: "/dashboard/cuentas-corrientes", icon: Wallet },
-      ],
-    },
-    {
-      title: "Reportes",
-      items: [
-        { title: "Reportes", url: "/dashboard/reportes", icon: BarChart3 },
       ],
     },
   ],
