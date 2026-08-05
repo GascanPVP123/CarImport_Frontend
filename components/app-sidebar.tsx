@@ -6,7 +6,6 @@ import {
   Package,
   FileText,
   ShoppingCart,
-  BarChart3,
   LogOut,
   Truck,
   Wallet,
@@ -60,12 +59,6 @@ const data = {
         { title: "Cuentas Corrientes", url: "/dashboard/cuentas-corrientes", icon: Wallet },
       ],
     },
-    {
-      title: "Reportes",
-      items: [
-        { title: "Reportes", url: "/dashboard/reportes", icon: BarChart3 },
-      ],
-    },
   ],
 };
 
@@ -75,7 +68,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <Sidebar collapsible="icon" {...props} className="border-r border-slate-800">
-      {/* Header */}
+      {/* Header */}lrfjk298+
       <SidebarHeader className="bg-slate-950 border-b border-slate-800 p-4">
         <SidebarMenu>
           <SidebarMenuItem>

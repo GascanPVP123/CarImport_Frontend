@@ -17,3 +17,10 @@ export default function RootLayout({
     </html>
   );
 }
+
+export const metadata = {
+  title: "CarImport",
+  description: "Sistema de gestión",
+  manifest: "/manifest.json",
+  themeColor: "#059669",
+};
