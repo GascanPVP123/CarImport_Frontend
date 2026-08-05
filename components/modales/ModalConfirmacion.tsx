@@ -61,24 +61,24 @@ export function ModalConfirmacion({
   };
 
   const descargarNotaVenta = async () => {
-    if (!notaVentaId) return;
-    const { pdf } = await import("@react-pdf/renderer");
-    const blob = await pdf(
-      <NotaVentaPDF
-        id={notaVentaId}
-        cliente={cliente}
-        fechaEmision={cabecera.fechaEmision}
-        horaEmision={horaEmision}
-        totalNeto={totalNeto}
-      />
-    ).toBlob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `NotaVenta_NV-000${notaVentaId}.pdf`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+  if (!notaVentaId) return;
+  
+  // ✅ Obtener datos reales de la nota de venta desde el backend
+  const notaVentaData = await notaVentaService.obtenerPorId(notaVentaId);
+  console.log("Datos reales de nota de venta:", notaVentaData);
+  
+  const { pdf } = await import("@react-pdf/renderer");
+  const blob = await pdf(
+    <NotaVentaPDF datos={notaVentaData} />
+  ).toBlob();
+  
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `NotaVenta_NV-000${notaVentaId}.pdf`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
