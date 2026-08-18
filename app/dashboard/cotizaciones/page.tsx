@@ -11,9 +11,6 @@ import { cn } from "@/lib/utils";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-// ============================================================
-// TIPOS E INTERFACES
-// ============================================================
 export type TipoPrecio = "MENOR" | "MAYOR" | "LIBRE";
 
 interface CarritoItem {
@@ -46,9 +43,6 @@ const normalizarUnidad = (unidad: string | undefined): Unidad => {
   return "unidad";
 };
 
-// ============================================================
-// COMPONENTE VISTA PREVIA
-// ============================================================
 const VistaPrevia: React.FC<{
   clienteNombre: string;
   clienteDocumento: string;
@@ -107,7 +101,7 @@ const VistaPrevia: React.FC<{
                   <div className="col-span-1 px-1 py-0.5 text-center text-gray-500">{idx + 1}</div>
                   <div className="col-span-2 px-1 py-0.5 text-gray-600">{item.codigoSku}</div>
                   <div className="col-span-4 px-1 py-0.5 truncate">{item.nombre}</div>
-                  <div className="col-span-1 px-1 py-0.5 text-center">{item.cantidad}</div>
+                  <div className="col-span-1 px-1 py-0.5 text-center">{item.cantidad || "—"}</div>
                   <div className="col-span-1 px-1 py-0.5 text-center text-gray-500">{item.unidadMedida}</div>
                   <div className="col-span-1 px-1 py-0.5 text-right">{item.precioVenta.toFixed(2)}</div>
                   <div className="col-span-2 px-1 py-0.5 text-right font-semibold">{(item.precioVenta * item.cantidad).toFixed(2)}</div>
@@ -136,9 +130,6 @@ const VistaPrevia: React.FC<{
   );
 };
 
-// ============================================================
-// COMPONENTE PRINCIPAL
-// ============================================================
 export default function NuevaCotizacionPage() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [clienteNombre, setClienteNombre] = useState("");
@@ -198,7 +189,6 @@ export default function NuevaCotizacionPage() {
       });
   }, []);
 
-  // 🟢 FUNCIONES CONTROLADORAS DE PRECIOS
   const cambiarTipoPrecio = (index: number, nuevoTipo: TipoPrecio) => {
     setCarrito((prev) =>
       prev.map((item, i) => {
@@ -222,8 +212,8 @@ export default function NuevaCotizacionPage() {
     );
   };
 
+  // ✅ Corregido: permitir cantidad 0 (campo vacío)
   const cambiarCantidadFila = (index: number, nuevaCantidad: number) => {
-    if (nuevaCantidad < 1) return;
     setCarrito((prev) =>
       prev.map((item, i) => (i === index ? { ...item, cantidad: nuevaCantidad } : item))
     );
@@ -303,6 +293,11 @@ export default function NuevaCotizacionPage() {
       alert("Complete los datos del cliente y agregue al menos un producto.");
       return;
     }
+    // Validar que no hayan cantidades en 0
+    if (carrito.some((item) => item.cantidad <= 0)) {
+      alert("Hay productos con cantidad 0. Por favor corrige o elimina esas filas.");
+      return;
+    }
     setLoading(true);
     const ahora = new Date();
     const horaExactaStr = ahora.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
@@ -342,13 +337,15 @@ export default function NuevaCotizacionPage() {
         condicionPago: "CONTADO",
         moneda: "SOLES",
         observaciones: "",
-        detalles: carrito.map((item) => ({
-          productoId: item.id,
-          cantidad: item.cantidad,
-          unidad: item.unidadMedida || "unidad",
-          precioUnitario: item.precioVenta,
-          descuento: 0,
-        })),
+        detalles: carrito
+          .filter((item) => item.cantidad > 0)
+          .map((item) => ({
+            productoId: item.id,
+            cantidad: item.cantidad,
+            unidad: item.unidadMedida || "unidad",
+            precioUnitario: item.precioVenta,
+            descuento: 0,
+          })),
       };
 
       const exito = await cotizacionService.guardar(payload);
@@ -363,7 +360,7 @@ export default function NuevaCotizacionPage() {
           telefono: clienteTelefono || "N/A",
         },
         cabecera: cabeceraFactura,
-        items: itemsParaPDF(),
+        items: itemsParaPDF().filter((item) => item.cantidad > 0),
         totalNeto: exito.total,
         horaEmision: horaExactaStr,
       });
@@ -391,7 +388,7 @@ export default function NuevaCotizacionPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <form onSubmit={manejarEnviarCotizacion} className="lg:col-span-2 space-y-6">
-          {/* PASO 1: DATOS DEL CLIENTE */}
+          {/* PASO 1 */}
           <div className="bg-white p-5 border border-gray-200 rounded-xl shadow-sm space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-7 h-7 rounded-full bg-gray-800 text-white text-xs font-bold flex items-center justify-center shrink-0">1</div>
@@ -401,48 +398,23 @@ export default function NuevaCotizacionPage() {
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <input
-                type="text"
-                required
-                className="w-full p-2.5 text-sm border rounded-lg"
-                placeholder="Nombre / Razón Social *"
-                value={clienteNombre}
-                onChange={(e) => setClienteNombre(e.target.value)}
-              />
-              <input
-                type="text"
-                className="w-full p-2.5 text-sm border rounded-lg"
-                placeholder="RUC / DNI"
-                value={clienteDocumento}
-                onChange={(e) => {
-                  const doc = e.target.value;
-                  setClienteDocumento(doc);
-                  const hallado = clientes.find((c) => c.documento === doc.trim());
-                  if (hallado) {
-                    setClienteNombre(hallado.nombre);
-                    setClienteDireccion(hallado.direccion || "");
-                    setClienteTelefono(hallado.telefono || "");
-                  }
-                }}
-              />
-              <input
-                type="text"
-                className="w-full p-2.5 text-sm border rounded-lg"
-                placeholder="Dirección"
-                value={clienteDireccion}
-                onChange={(e) => setClienteDireccion(e.target.value)}
-              />
-              <input
-                type="text"
-                className="w-full p-2.5 text-sm border rounded-lg"
-                placeholder="Teléfono"
-                value={clienteTelefono}
-                onChange={(e) => setClienteTelefono(e.target.value)}
-              />
+              <input type="text" required className="w-full p-2.5 text-sm border rounded-lg" placeholder="Nombre / Razón Social *" value={clienteNombre} onChange={(e) => setClienteNombre(e.target.value)} />
+              <input type="text" className="w-full p-2.5 text-sm border rounded-lg" placeholder="RUC / DNI" value={clienteDocumento} onChange={(e) => {
+                const doc = e.target.value;
+                setClienteDocumento(doc);
+                const hallado = clientes.find((c) => c.documento === doc.trim());
+                if (hallado) {
+                  setClienteNombre(hallado.nombre);
+                  setClienteDireccion(hallado.direccion || "");
+                  setClienteTelefono(hallado.telefono || "");
+                }
+              }} />
+              <input type="text" className="w-full p-2.5 text-sm border rounded-lg" placeholder="Dirección" value={clienteDireccion} onChange={(e) => setClienteDireccion(e.target.value)} />
+              <input type="text" className="w-full p-2.5 text-sm border rounded-lg" placeholder="Teléfono" value={clienteTelefono} onChange={(e) => setClienteTelefono(e.target.value)} />
             </div>
           </div>
 
-          {/* PASO 2: INFORMACIÓN DE LA COTIZACIÓN */}
+          {/* PASO 2 */}
           <div className="bg-white p-5 border border-gray-200 rounded-xl shadow-sm space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-7 h-7 rounded-full bg-gray-800 text-white text-xs font-bold flex items-center justify-center shrink-0">2</div>
@@ -462,32 +434,20 @@ export default function NuevaCotizacionPage() {
               </div>
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">Condición de Pago</label>
-                <select
-                  className="w-full p-2.5 text-sm border rounded-lg bg-white"
-                  value={cabeceraFactura.condicionPago}
-                  onChange={(e) => setCabeceraFactura({ ...cabeceraFactura, condicionPago: e.target.value })}
-                >
-                  {OPCIONES_PAGO.map((op) => (
-                    <option key={op} value={op}>{op.replace("_", " ")}</option>
-                  ))}
+                <select className="w-full p-2.5 text-sm border rounded-lg bg-white" value={cabeceraFactura.condicionPago} onChange={(e) => setCabeceraFactura({ ...cabeceraFactura, condicionPago: e.target.value })}>
+                  {OPCIONES_PAGO.map((op) => <option key={op} value={op}>{op.replace("_", " ")}</option>)}
                 </select>
               </div>
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">Moneda</label>
-                <select
-                  className="w-full p-2.5 text-sm border rounded-lg bg-white"
-                  value={cabeceraFactura.moneda}
-                  onChange={(e) => setCabeceraFactura({ ...cabeceraFactura, moneda: e.target.value })}
-                >
-                  {OPCIONES_MONEDA.map((op) => (
-                    <option key={op} value={op}>{op}</option>
-                  ))}
+                <select className="w-full p-2.5 text-sm border rounded-lg bg-white" value={cabeceraFactura.moneda} onChange={(e) => setCabeceraFactura({ ...cabeceraFactura, moneda: e.target.value })}>
+                  {OPCIONES_MONEDA.map((op) => <option key={op} value={op}>{op}</option>)}
                 </select>
               </div>
             </div>
           </div>
 
-          {/* PASO 3: SELECCIONAR PRODUCTOS */}
+          {/* PASO 3 */}
           <div className="bg-white p-5 border border-gray-200 rounded-xl shadow-sm space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-7 h-7 rounded-full bg-gray-800 text-white text-xs font-bold flex items-center justify-center shrink-0">3</div>
@@ -525,15 +485,11 @@ export default function NuevaCotizacionPage() {
                           const pm = p.precioMenor ?? p.precioVenta ?? 0;
                           const pMa = p.precioMayor ?? p.precioVenta ?? 0;
                           return (
-                            <CommandItem
-                              key={p.id}
-                              value={`${p.codigoSku} ${p.nombre}`}
-                              onSelect={() => {
-                                setProductoSeleccionadoId(p.id!.toString());
-                                setUnidadInput(normalizarUnidad(p.unidadMedida));
-                                setOpenCombobox(false);
-                              }}
-                            >
+                            <CommandItem key={p.id} value={`${p.codigoSku} ${p.nombre}`} onSelect={() => {
+                              setProductoSeleccionadoId(p.id!.toString());
+                              setUnidadInput(normalizarUnidad(p.unidadMedida));
+                              setOpenCombobox(false);
+                            }}>
                               <Check className={cn("mr-2 h-4 w-4", productoSeleccionadoId === p.id?.toString() ? "opacity-100" : "opacity-0")} />
                               <span className="text-xs">
                                 [{p.codigoSku}] {p.nombre} (Stock: {p.stock} | Menor: S/ {pm.toFixed(2)} | Mayor: S/ {pMa.toFixed(2)})
@@ -551,29 +507,22 @@ export default function NuevaCotizacionPage() {
                 type="number"
                 min="1"
                 className="w-20 p-2 text-sm border rounded-lg text-center h-10"
-                value={cantidadInput}
-                onChange={(e) => setCantidadInput(parseInt(e.target.value) || 1)}
+                value={cantidadInput === 0 ? "" : cantidadInput}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setCantidadInput(val === "" ? 0 : parseInt(val));
+                }}
               />
-              <select
-                className="w-24 p-2 text-sm border rounded-lg bg-white h-10"
-                value={unidadInput}
-                onChange={(e) => setUnidadInput(e.target.value as Unidad)}
-              >
-                {OPCIONES_UNIDAD.map((op) => (
-                  <option key={op} value={op}>{op}</option>
-                ))}
+              <select className="w-24 p-2 text-sm border rounded-lg bg-white h-10" value={unidadInput} onChange={(e) => setUnidadInput(e.target.value as Unidad)}>
+                {OPCIONES_UNIDAD.map((op) => <option key={op} value={op}>{op}</option>)}
               </select>
-              <button
-                type="button"
-                onClick={agregarAlCarrito}
-                className="flex items-center gap-1 bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-900 transition h-10"
-              >
+              <button type="button" onClick={agregarAlCarrito} className="flex items-center gap-1 bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-900 transition h-10">
                 <Plus className="h-4 w-4" /> Añadir Fila
               </button>
             </div>
           </div>
 
-          {/* PASO 4: DETALLE DE LA COTIZACIÓN CON PRECIOS DINÁMICOS */}
+          {/* PASO 4 */}
           <div className="bg-white p-5 border border-gray-200 rounded-xl shadow-sm space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-7 h-7 rounded-full bg-gray-800 text-white text-xs font-bold flex items-center justify-center shrink-0">4</div>
@@ -613,17 +562,20 @@ export default function NuevaCotizacionPage() {
                           <td className="py-2 font-mono text-xs text-gray-600">{item.codigoSku}</td>
                           <td className="py-2 font-medium text-gray-900">{item.nombre}</td>
                           <td className="py-2 text-center">
+                            {/* ✅ Campo vacío cuando es 0 */}
                             <input
                               type="number"
-                              min="1"
+                              min="0"
                               value={item.cantidad === 0 ? "" : item.cantidad}
-                              onChange={(e) => cambiarCantidadFila(index, parseInt(e.target.value) || 1)}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                cambiarCantidadFila(index, val === "" ? 0 : parseInt(val));
+                              }}
                               className="w-14 text-center text-xs border rounded p-1"
                             />
                           </td>
                           <td className="py-2 text-center text-gray-500">{item.unidadMedida}</td>
 
-                          {/* Selector de Tipo de Precio / Entrada Manual */}
                           <td className="py-2 text-right min-w-[160px]">
                             <div className="flex flex-col gap-1 items-end w-full">
                               <select
@@ -642,8 +594,11 @@ export default function NuevaCotizacionPage() {
                                   <input
                                     type="number"
                                     step="0.1"
-                                    value={item.precioVenta}
-                                    onChange={(e) => cambiarPrecioManual(index, parseFloat(e.target.value) || 0)}
+                                    value={item.precioVenta === 0 ? "" : item.precioVenta}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      cambiarPrecioManual(index, val === "" ? 0 : parseFloat(val));
+                                    }}
                                     className="w-20 text-right text-xs font-mono font-bold border border-amber-300 rounded px-1.5 py-0.5 bg-amber-50 focus:bg-white focus:outline-none"
                                   />
                                 </div>
@@ -657,11 +612,7 @@ export default function NuevaCotizacionPage() {
 
                           <td className="py-2 text-right font-semibold">S/ {importeItem.toFixed(2)}</td>
                           <td className="py-2 text-center">
-                            <button
-                              type="button"
-                              onClick={() => eliminarDelCarrito(item.id)}
-                              className="text-gray-400 hover:text-red-600 transition"
-                            >
+                            <button type="button" onClick={() => eliminarDelCarrito(item.id)} className="text-gray-400 hover:text-red-600 transition">
                               <Trash2 className="h-4 w-4" />
                             </button>
                           </td>
