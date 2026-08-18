@@ -641,7 +641,7 @@ export default function NuevaCotizacionPage() {
                                   <span className="text-xs text-gray-500 font-medium">S/</span>
                                   <input
                                     type="number"
-                                    step="0.01"
+                                    step="0.1"
                                     value={item.precioVenta}
                                     onChange={(e) => cambiarPrecioManual(index, parseFloat(e.target.value) || 0)}
                                     className="w-20 text-right text-xs font-mono font-bold border border-amber-300 rounded px-1.5 py-0.5 bg-amber-50 focus:bg-white focus:outline-none"

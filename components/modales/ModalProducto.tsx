@@ -326,21 +326,21 @@ function ModalProductoInner({
                 <label className="text-xs font-bold text-slate-800 mb-1 flex items-center gap-1">
                   <DollarSign className="h-3.5 w-3.5 text-amber-600" /> P. Compra (S/)
                 </label>
-                <input type="number" step="0.01" min="0" value={form.precioCompra === 0 ? "" : form.precioCompra} onChange={(e) => setForm({ ...form, precioCompra: parseFloat(e.target.value) || 0 })} placeholder="0.00" className="w-full p-2 text-sm border rounded-lg font-mono font-semibold bg-amber-50/50 text-amber-900 border-amber-200 focus:ring-2 focus:ring-amber-500 focus:outline-none" />
+                <input type="number" step="0.1" min="0" value={form.precioCompra === 0 ? "" : form.precioCompra} onChange={(e) => setForm({ ...form, precioCompra: parseFloat(e.target.value) || 0 })} placeholder="0.00" className="w-full p-2 text-sm border rounded-lg font-mono font-semibold bg-amber-50/50 text-amber-900 border-amber-200 focus:ring-2 focus:ring-amber-500 focus:outline-none" />
               </div>
 
               <div>
                 <label className="text-xs font-bold text-slate-800 mb-1 flex items-center gap-1">
                   <DollarSign className="h-3.5 w-3.5 text-emerald-600" /> P. Menor (S/) *
                 </label>
-                <input type="number" step="0.01" min="0" required value={form.precioMenor === 0 ? "" : form.precioMenor} onChange={(e) => setForm({ ...form, precioMenor: parseFloat(e.target.value) || 0 })} placeholder="0.00" className="w-full p-2 text-sm border rounded-lg font-mono font-semibold bg-emerald-50/50 text-emerald-900 border-emerald-200 focus:ring-2 focus:ring-emerald-500 focus:outline-none" />
+                <input type="number" step="0.1" min="0" required value={form.precioMenor === 0 ? "" : form.precioMenor} onChange={(e) => setForm({ ...form, precioMenor: parseFloat(e.target.value) || 0 })} placeholder="0.00" className="w-full p-2 text-sm border rounded-lg font-mono font-semibold bg-emerald-50/50 text-emerald-900 border-emerald-200 focus:ring-2 focus:ring-emerald-500 focus:outline-none" />
               </div>
 
               <div>
                 <label className="text-xs font-bold text-slate-800 mb-1 flex items-center gap-1">
                   <DollarSign className="h-3.5 w-3.5 text-blue-600" /> P. Mayor (S/)
                 </label>
-                <input type="number" step="0.01" min="0" value={form.precioMayor === 0 ? "" : form.precioMayor} onChange={(e) => setForm({ ...form, precioMayor: parseFloat(e.target.value) || 0 })} placeholder="0.00" className="w-full p-2 text-sm border rounded-lg font-mono font-semibold bg-blue-50/50 text-blue-900 border-blue-200 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+                <input type="number" step="0.1" min="0" value={form.precioMayor === 0 ? "" : form.precioMayor} onChange={(e) => setForm({ ...form, precioMayor: parseFloat(e.target.value) || 0 })} placeholder="0.00" className="w-full p-2 text-sm border rounded-lg font-mono font-semibold bg-blue-50/50 text-blue-900 border-blue-200 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
               </div>
 
               <div>
