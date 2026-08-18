@@ -616,7 +616,7 @@ export default function NuevaCotizacionPage() {
                             <input
                               type="number"
                               min="1"
-                              value={item.cantidad}
+                              value={item.cantidad === 0 ? "" : item.cantidad}
                               onChange={(e) => cambiarCantidadFila(index, parseInt(e.target.value) || 1)}
                               className="w-14 text-center text-xs border rounded p-1"
                             />
