@@ -22,10 +22,9 @@ const AuthContext = createContext<AuthContextType>({
   logout: () => {},
 });
 
-// Leer valores iniciales del localStorage (solo se ejecuta una vez al montar)
 const getInitialAuth = () => {
   if (typeof window === "undefined") return { isAuthenticated: false, user: null };
-  
+
   const token = localStorage.getItem("token");
   const userData = localStorage.getItem("user");
 
@@ -51,10 +50,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
+    // 1. Limpiar storage
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    sessionStorage.clear();
+
+    // 2. Limpiar estado
     setAuth({ isAuthenticated: false, user: null });
-    router.push("/login");
+
+    // 3. Redirigir reemplazando la historia (evita volver atrás)
+    router.replace("/login");
+
+    // 4. Recargar para limpiar caché de componentes
+    setTimeout(() => {
+      window.location.href = "/login";
+    }, 100);
   }, [router]);
 
   return (

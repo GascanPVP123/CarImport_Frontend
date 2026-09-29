@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://carimportbackend-production.up.railway.app/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://carimport-backend-e9fx.onrender.com/api";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
 
@@ -38,6 +38,7 @@ export async function apiRequest<T>(endpoint: string, options: RequestOptions): 
       if (isBrowser) {
         localStorage.removeItem("token");
         localStorage.removeItem("user");
+        sessionStorage.clear();
         window.location.href = "/login";
       }
       throw new Error("Sesión expirada o permisos insuficientes");
