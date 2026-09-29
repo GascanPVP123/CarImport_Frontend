@@ -3,7 +3,7 @@
 import React from "react";
 import { AlertTriangle, X } from "lucide-react";
 
-interface ModalConfirmDialogProps {
+interface ModalConfirmacionProps {
   titulo: string;
   mensaje: string;
   textoConfirmar?: string;
@@ -27,7 +27,7 @@ export function ModalConfirmDialog({
   colorConfirmar = "red",
   onConfirmar,
   onCancelar,
-}: ModalConfirmDialogProps) {
+}: ModalConfirmacionProps) {
   const [loading, setLoading] = React.useState(false);
 
   const handleConfirmar = async () => {
@@ -42,6 +42,8 @@ export function ModalConfirmDialog({
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-200 animate-in fade-in zoom-in duration-150">
+        
+        {/* CABECERA */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-full bg-red-100">
@@ -59,10 +61,12 @@ export function ModalConfirmDialog({
           </button>
         </div>
 
+        {/* MENSAJE */}
         <div className="p-5">
           <p className="text-sm text-gray-600 leading-relaxed">{mensaje}</p>
         </div>
 
+        {/* BOTONES */}
         <div className="flex justify-end gap-3 px-5 py-4 bg-gray-50 border-t border-gray-100">
           <button
             type="button"

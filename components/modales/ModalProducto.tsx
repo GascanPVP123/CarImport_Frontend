@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { X, Package, DollarSign, Tag, Layers, Hash, Building2, Plus, Pencil } from "lucide-react";
+import { X, Package, DollarSign, Tag, Layers, Hash, Building2, Plus, Pencil, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { Producto } from "@/services/productoService";
 import { importadoraService, Importadora } from "@/services/importadoraService";
-import { toast } from "sonner";
 
 interface ModalProductoProps {
   isOpen: boolean;
@@ -46,9 +46,7 @@ export function ModalProducto({
 
     cargarImportadoras();
 
-    return () => {
-      ignore = true;
-    };
+    return () => { ignore = true; };
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -133,7 +131,8 @@ function ModalProductoInner({
     importadoraId: productoEditar?.importadora?.id ?? productoEditar?.importadoraId ?? null,
   }));
 
-  const handleGuardarImportadora = async (e: React.SyntheticEvent) => {
+  // ==================== GUARDAR IMPORTADORA ====================
+  const handleGuardarImportadora = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setErrorImp(null);
 
@@ -164,7 +163,7 @@ function ModalProductoInner({
         setImportadoras((prev) =>
           prev.map((i) => (i.id === resultado.id ? resultado : i))
         );
-        toast.success("Importadora actualizada", { id: toastId });
+        toast.success("Importadora actualizada correctamente", { id: toastId });
       } else {
         resultado = await importadoraService.guardar({
           ruc: formImp.ruc.trim(),
@@ -172,7 +171,7 @@ function ModalProductoInner({
           telefono: formImp.telefono.trim(),
         });
         setImportadoras((prev) => [...prev, resultado]);
-        toast.success("Importadora creada", { id: toastId });
+        toast.success("Importadora creada correctamente", { id: toastId });
       }
 
       setForm((prev) => ({ ...prev, importadoraId: resultado.id }));
@@ -191,7 +190,38 @@ function ModalProductoInner({
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // ==================== ELIMINAR IMPORTADORA ====================
+  const handleEliminarImportadora = async (id: number) => {
+    if (!confirm("¿Estás seguro de que deseas eliminar esta importadora?")) return;
+
+    const toastId = toast.loading("Eliminando importadora...");
+
+    try {
+      await importadoraService.eliminar(id);
+
+      setImportadoras((prev) => prev.filter((i) => i.id !== id));
+
+      setForm((prev) => ({
+        ...prev,
+        importadoraId: prev.importadoraId === id ? null : prev.importadoraId,
+      }));
+
+      toast.success("Importadora eliminada correctamente", { id: toastId });
+
+      setFormImp({ ruc: "", razonSocial: "", telefono: "" });
+      setEditandoImportadora(null);
+      setSubModalOpen(false);
+    } catch (err: unknown) {
+      const mensaje = err instanceof Error ? err.message : "Error al eliminar";
+      toast.error("Error al eliminar importadora", {
+        id: toastId,
+        description: mensaje,
+      });
+    }
+  };
+
+  // ==================== SUBMIT PRODUCTO ====================
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setErrorMsj(null);
 
@@ -252,14 +282,25 @@ function ModalProductoInner({
                 <label className="text-xs font-semibold text-gray-700 mb-1 flex items-center gap-1">
                   <Hash className="h-3.5 w-3.5 text-gray-400" /> SKU / Código *
                 </label>
-                <input type="text" required value={form.codigoSku} onChange={(e) => setForm({ ...form, codigoSku: e.target.value })} placeholder="Ej: FILT-TOY-01" className="w-full p-2.5 text-sm border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none uppercase font-mono" />
+                <input
+                  type="text"
+                  required
+                  value={form.codigoSku}
+                  onChange={(e) => setForm({ ...form, codigoSku: e.target.value })}
+                  placeholder="Ej: FILT-TOY-01"
+                  className="w-full p-2.5 text-sm border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none uppercase font-mono"
+                />
               </div>
 
               <div>
                 <label className="text-xs font-semibold text-gray-700 mb-1 flex items-center gap-1">
                   <Layers className="h-3.5 w-3.5 text-gray-400" /> Unidad Medida
                 </label>
-                <select value={form.unidadMedida} onChange={(e) => setForm({ ...form, unidadMedida: e.target.value })} className="w-full p-2.5 text-sm border rounded-lg bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                <select
+                  value={form.unidadMedida}
+                  onChange={(e) => setForm({ ...form, unidadMedida: e.target.value })}
+                  className="w-full p-2.5 text-sm border rounded-lg bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                >
                   {OPCIONES_UNIDAD.map((u) => (
                     <option key={u} value={u}>{u.toUpperCase()}</option>
                   ))}
@@ -271,10 +312,17 @@ function ModalProductoInner({
               <label className="text-xs font-semibold text-gray-700 mb-1 flex items-center gap-1">
                 <Tag className="h-3.5 w-3.5 text-gray-400" /> Nombre del Producto *
               </label>
-              <input type="text" required value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} placeholder="Ej: Filtro de Aceite Toyota Hilux" className="w-full p-2.5 text-sm border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none" />
+              <input
+                type="text"
+                required
+                value={form.nombre}
+                onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+                placeholder="Ej: Filtro de Aceite Toyota Hilux"
+                className="w-full p-2.5 text-sm border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+              />
             </div>
 
-            {/* ✅ Selector de Importadora con Editar */}
+            {/* SELECTOR IMPORTADORA */}
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="text-xs font-semibold text-gray-700 flex items-center gap-1">
@@ -317,7 +365,12 @@ function ModalProductoInner({
 
               <select
                 value={form.importadoraId || ""}
-                onChange={(e) => setForm({ ...form, importadoraId: e.target.value ? Number(e.target.value) : null })}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    importadoraId: e.target.value ? Number(e.target.value) : null,
+                  })
+                }
                 className="w-full p-2.5 text-sm border rounded-lg bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
               >
                 <option value="">-- Sin importadora asignada --</option>
@@ -333,7 +386,13 @@ function ModalProductoInner({
               <label className="text-xs font-semibold text-gray-700 mb-1 block">
                 Descripción <span className="text-gray-400 font-normal">(Opcional)</span>
               </label>
-              <textarea rows={2} value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} placeholder="Especificaciones o notas adicionales..." className="w-full p-2.5 text-sm border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none resize-none" />
+              <textarea
+                rows={2}
+                value={form.descripcion}
+                onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
+                placeholder="Especificaciones o notas adicionales..."
+                className="w-full p-2.5 text-sm border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none resize-none"
+              />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 border-t border-gray-100">
@@ -341,32 +400,84 @@ function ModalProductoInner({
                 <label className="text-xs font-bold text-slate-800 mb-1 flex items-center gap-1">
                   <DollarSign className="h-3.5 w-3.5 text-amber-600" /> P. Compra (S/)
                 </label>
-                <input type="number" step="0.1" min="0" value={form.precioCompra === 0 ? "" : form.precioCompra} onChange={(e) => setForm({ ...form, precioCompra: parseFloat(e.target.value) || 0 })} placeholder="0.00" className="w-full p-2 text-sm border rounded-lg font-mono font-semibold bg-amber-50/50 text-amber-900 border-amber-200 focus:ring-2 focus:ring-amber-500 focus:outline-none" />
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={form.precioCompra === 0 ? "" : form.precioCompra}
+                  onChange={(e) =>
+                    setForm({ ...form, precioCompra: parseFloat(e.target.value) || 0 })
+                  }
+                  placeholder="0.00"
+                  className="w-full p-2 text-sm border rounded-lg font-mono font-semibold bg-amber-50/50 text-amber-900 border-amber-200 focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                />
               </div>
-
+              
               <div>
                 <label className="text-xs font-bold text-slate-800 mb-1 flex items-center gap-1">
                   <DollarSign className="h-3.5 w-3.5 text-emerald-600" /> P. Menor (S/) *
                 </label>
-                <input type="number" step="0.1" min="0" required value={form.precioMenor === 0 ? "" : form.precioMenor} onChange={(e) => setForm({ ...form, precioMenor: parseFloat(e.target.value) || 0 })} placeholder="0.00" className="w-full p-2 text-sm border rounded-lg font-mono font-semibold bg-emerald-50/50 text-emerald-900 border-emerald-200 focus:ring-2 focus:ring-emerald-500 focus:outline-none" />
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  required
+                  value={form.precioMenor === 0 ? "" : form.precioMenor}
+                  onChange={(e) =>
+                    setForm({ ...form, precioMenor: parseFloat(e.target.value) || 0 })
+                  }
+                  placeholder="0.00"
+                  className="w-full p-2 text-sm border rounded-lg font-mono font-semibold bg-emerald-50/50 text-emerald-900 border-emerald-200 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                />
               </div>
 
               <div>
                 <label className="text-xs font-bold text-slate-800 mb-1 flex items-center gap-1">
                   <DollarSign className="h-3.5 w-3.5 text-blue-600" /> P. Mayor (S/)
                 </label>
-                <input type="number" step="0.1" min="0" value={form.precioMayor === 0 ? "" : form.precioMayor} onChange={(e) => setForm({ ...form, precioMayor: parseFloat(e.target.value) || 0 })} placeholder="0.00" className="w-full p-2 text-sm border rounded-lg font-mono font-semibold bg-blue-50/50 text-blue-900 border-blue-200 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={form.precioMayor === 0 ? "" : form.precioMayor}
+                  onChange={(e) =>
+                    setForm({ ...form, precioMayor: parseFloat(e.target.value) || 0 })
+                  }
+                  placeholder="0.00"
+                  className="w-full p-2 text-sm border rounded-lg font-mono font-semibold bg-blue-50/50 text-blue-900 border-blue-200 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
               </div>
 
               <div>
                 <label className="text-xs font-bold text-slate-800 mb-1 block">Stock Inicial *</label>
-                <input type="number" min="0" required value={form.stock === 0 ? "" : form.stock} onChange={(e) => setForm({ ...form, stock: parseInt(e.target.value) || 0 })} placeholder="0" className="w-full p-2 text-sm border rounded-lg font-mono text-center focus:ring-2 focus:ring-slate-500 focus:outline-none" />
+                <input
+                  type="number"
+                  min="0"
+                  required
+                  value={form.stock === 0 ? "" : form.stock}
+                  onChange={(e) =>
+                    setForm({ ...form, stock: parseInt(e.target.value) || 0 })
+                  }
+                  placeholder="0"
+                  className="w-full p-2 text-sm border rounded-lg font-mono text-center focus:ring-2 focus:ring-slate-500 focus:outline-none"
+                />
               </div>
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-              <button type="button" onClick={onClose} disabled={loading} className="px-4 py-2 text-xs font-bold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition">Cancelar</button>
-              <button type="submit" disabled={loading} className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition shadow-sm disabled:bg-gray-300">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={loading}
+                className="px-4 py-2 text-xs font-bold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition shadow-sm disabled:bg-gray-300"
+              >
                 {loading ? "Guardando..." : productoEditar ? "Actualizar Producto" : "Guardar Producto"}
               </button>
             </div>
@@ -374,7 +485,7 @@ function ModalProductoInner({
         </div>
       </div>
 
-      {/* ✅ Sub-modal para Crear/Editar Importadora */}
+      {/* SUB-MODAL IMPORTADORA */}
       {subModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden border border-gray-200 animate-in fade-in zoom-in duration-150">
@@ -385,36 +496,93 @@ function ModalProductoInner({
                   {editandoImportadora ? "Editar Importadora" : "Registrar Importadora"}
                 </h3>
               </div>
-              <button type="button" onClick={() => setSubModalOpen(false)} className="text-white/70 hover:text-white transition">
+              <button
+                type="button"
+                onClick={() => setSubModalOpen(false)}
+                className="text-white/70 hover:text-white transition"
+              >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
             <form onSubmit={handleGuardarImportadora} className="p-4 space-y-3">
               {errorImp && (
-                <div className="p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600 font-medium">{errorImp}</div>
+                <div className="p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600 font-medium">
+                  {errorImp}
+                </div>
               )}
 
               <div>
                 <label className="text-xs font-semibold text-gray-700 block mb-1">Número RUC *</label>
-                <input type="text" required maxLength={11} value={formImp.ruc} onChange={(e) => setFormImp({ ...formImp, ruc: e.target.value })} placeholder="Ej: 20601234567" className="w-full p-2 text-xs border rounded focus:ring-2 focus:ring-emerald-500 font-mono" />
+                <input
+                  type="text"
+                  required
+                  maxLength={11}
+                  value={formImp.ruc}
+                  onChange={(e) => setFormImp({ ...formImp, ruc: e.target.value })}
+                  placeholder="Ej: 20601234567"
+                  className="w-full p-2 text-xs border rounded focus:ring-2 focus:ring-emerald-500 font-mono"
+                />
               </div>
 
               <div>
                 <label className="text-xs font-semibold text-gray-700 block mb-1">Razón Social / Nombre *</label>
-                <input type="text" required value={formImp.razonSocial} onChange={(e) => setFormImp({ ...formImp, razonSocial: e.target.value })} placeholder="Ej: Importadora Perú SAC" className="w-full p-2 text-xs border rounded focus:ring-2 focus:ring-emerald-500" />
+                <input
+                  type="text"
+                  required
+                  value={formImp.razonSocial}
+                  onChange={(e) => setFormImp({ ...formImp, razonSocial: e.target.value })}
+                  placeholder="Ej: Importadora Perú SAC"
+                  className="w-full p-2 text-xs border rounded focus:ring-2 focus:ring-emerald-500"
+                />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-gray-700 block mb-1">Teléfono <span className="text-gray-400 font-normal">(Opcional)</span></label>
-                <input type="text" value={formImp.telefono} onChange={(e) => setFormImp({ ...formImp, telefono: e.target.value })} placeholder="Ej: 987654321" className="w-full p-2 text-xs border rounded focus:ring-2 focus:ring-emerald-500" />
+                <label className="text-xs font-semibold text-gray-700 block mb-1">
+                  Teléfono <span className="text-gray-400 font-normal">(Opcional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={formImp.telefono}
+                  onChange={(e) => setFormImp({ ...formImp, telefono: e.target.value })}
+                  placeholder="Ej: 987654321"
+                  className="w-full p-2 text-xs border rounded focus:ring-2 focus:ring-emerald-500"
+                />
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t">
-                <button type="button" onClick={() => setSubModalOpen(false)} className="px-3 py-1.5 text-xs font-semibold text-gray-600 bg-gray-100 rounded hover:bg-gray-200">Cancelar</button>
-                <button type="submit" disabled={guardandoImp} className={`px-4 py-1.5 text-xs font-semibold text-white rounded hover:opacity-90 disabled:bg-gray-300 ${editandoImportadora ? "bg-amber-600 hover:bg-amber-700" : "bg-emerald-600 hover:bg-emerald-700"}`}>
-                  {guardandoImp ? "Guardando..." : editandoImportadora ? "Actualizar" : "Guardar"}
-                </button>
+              <div className="flex justify-between items-center gap-2 pt-3 border-t">
+                {/* BOTÓN ELIMINAR */}
+                {editandoImportadora?.id && (
+                  <button
+                    type="button"
+                    onClick={() => handleEliminarImportadora(editandoImportadora.id!)}
+                    disabled={guardandoImp}
+                    className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded hover:bg-red-100 transition disabled:opacity-50"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Eliminar
+                  </button>
+                )}
+
+                <div className="flex gap-2 ml-auto">
+                  <button
+                    type="button"
+                    onClick={() => setSubModalOpen(false)}
+                    disabled={guardandoImp}
+                    className="px-3 py-1.5 text-xs font-semibold text-gray-600 bg-gray-100 rounded hover:bg-gray-200 disabled:opacity-50"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={guardandoImp}
+                    className={`px-4 py-1.5 text-xs font-semibold text-white rounded disabled:bg-gray-300 ${
+                      editandoImportadora ? "bg-amber-600 hover:bg-amber-700" : "bg-emerald-600 hover:bg-emerald-700"
+                    }`}
+                  >
+                    {guardandoImp ? "Guardando..." : editandoImportadora ? "Actualizar" : "Guardar"}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
