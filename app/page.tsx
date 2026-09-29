@@ -3,7 +3,8 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { 
-  Package, AlertTriangle, Truck, DollarSign, Plus} from "lucide-react";
+  Package, AlertTriangle, Truck, DollarSign, Plus
+} from "lucide-react";
 import { productoService } from "@/services/productoService";
 import { consignacionService } from "@/services/consignacionService";
 import { cuentaCorrienteService } from "@/services/cuentaCorrienteService";
@@ -66,36 +67,40 @@ export default function DashboardPage() {
       {/* KPIs MODERNOS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
-          titulo="Total Productos"
-          valor={loading ? "..." : kpis.productos}
-          icono={<Package className="h-5 w-5" />}
-          colorScheme="emerald"
-          tendencia={{ valor: 12 }}
-          subtitulo="Últimos 30 días"
+          title="Total Productos"
+          value={loading ? "..." : kpis.productos}
+          icon={Package}
+          variant="emerald"
+          delta={{ value: "+12%", isPositive: true }}
+          subtitle="Últimos 30 días"
+          loading={loading}
         />
         <KPICard
-          titulo="Stock Bajo"
-          valor={loading ? "..." : kpis.stockBajo}
-          icono={<AlertTriangle className="h-5 w-5" />}
-          colorScheme="amber"
-          tendencia={{ valor: -5 }}
-          subtitulo="Requieren reposición"
+          title="Stock Bajo"
+          value={loading ? "..." : kpis.stockBajo}
+          icon={AlertTriangle}
+          variant="amber"
+          delta={{ value: "-5%", isPositive: false }}
+          subtitle="Requieren reposición"
+          loading={loading}
         />
         <KPICard
-          titulo="Consignaciones"
-          valor={loading ? "..." : kpis.consignacionesActivas}
-          icono={<Truck className="h-5 w-5" />}
-          colorScheme="blue"
-          tendencia={{ valor: 8 }}
-          subtitulo="En tiendas aliadas"
+          title="Consignaciones"
+          value={loading ? "..." : kpis.consignacionesActivas}
+          icon={Truck}
+          variant="blue"
+          delta={{ value: "+8%", isPositive: true }}
+          subtitle="En tiendas aliadas"
+          loading={loading}
         />
         <KPICard
-          titulo="Por Cobrar"
-          valor={loading ? "..." : `S/ ${kpis.saldoPendiente.toFixed(0)}`}
-          icono={<DollarSign className="h-5 w-5" />}
-          colorScheme="purple"
-          tendencia={{ valor: 15 }}
-          subtitulo="Saldos pendientes"
+          title="Por Cobrar"
+          value={loading ? "..." : `S/ ${kpis.saldoPendiente.toFixed(0)}`}
+          icon={DollarSign}
+          variant="purple"
+          delta={{ value: "+15%", isPositive: true }}
+          subtitle="Saldos pendientes"
+          loading={loading}
         />
       </div>
     </div>
