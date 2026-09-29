@@ -1,11 +1,15 @@
 "use client";
 
-import React, { useState, useMemo, useCallback, useRef } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { 
   Plus, Search, RefreshCw, AlertCircle, Building2, Truck, 
   CheckCircle, RotateCcw, DollarSign, ShoppingCart, Undo2, Eye 
 } from "lucide-react";
-import { consignacionService, Consignacion, ConsignacionRequest, VentaConsignacionRequest, DevolucionConsignacionRequest } from "@/services/consignacionService";
+import { toast } from "sonner";
+import { 
+  consignacionService, Consignacion, ConsignacionRequest, 
+  VentaConsignacionRequest, DevolucionConsignacionRequest 
+} from "@/services/consignacionService";
 import { tiendaAliadaService, TiendaAliada } from "@/services/tiendaAliadaService";
 import { ModalConsignacion } from "@/components/consignacion/ModalConsignacion";
 import { ModalTiendaAliada } from "@/components/consignacion/ModalTiendaAliada";
@@ -14,10 +18,26 @@ import { ModalDevolucionConsignacion } from "@/components/consignacion/ModalDevo
 import { ModalDetalleConsignacion } from "@/components/consignacion/ModalDetalleConsignacion";
 
 const ESTADO_CONFIG: Record<string, { color: string; icono: React.ReactNode; label: string }> = {
-  ENVIADA: { color: "bg-blue-100 text-blue-800 border-blue-200", icono: <Truck className="h-3.5 w-3.5" />, label: "Enviada" },
-  PARCIAL: { color: "bg-amber-100 text-amber-800 border-amber-200", icono: <ShoppingCart className="h-3.5 w-3.5" />, label: "Parcial" },
-  COMPLETADA: { color: "bg-emerald-100 text-emerald-800 border-emerald-200", icono: <CheckCircle className="h-3.5 w-3.5" />, label: "Completada" },
-  DEVUELTA: { color: "bg-red-100 text-red-800 border-red-200", icono: <Undo2 className="h-3.5 w-3.5" />, label: "Devuelta" },
+  ENVIADA: { 
+    color: "bg-blue-100 text-blue-800 border-blue-200", 
+    icono: <Truck className="h-3.5 w-3.5" />, 
+    label: "Enviada" 
+  },
+  PARCIAL: { 
+    color: "bg-amber-100 text-amber-800 border-amber-200", 
+    icono: <ShoppingCart className="h-3.5 w-3.5" />, 
+    label: "Parcial" 
+  },
+  COMPLETADA: { 
+    color: "bg-emerald-100 text-emerald-800 border-emerald-200", 
+    icono: <CheckCircle className="h-3.5 w-3.5" />, 
+    label: "Completada" 
+  },
+  DEVUELTA: { 
+    color: "bg-red-100 text-red-800 border-red-200", 
+    icono: <Undo2 className="h-3.5 w-3.5" />, 
+    label: "Devuelta" 
+  },
 };
 
 const COLORES_ICONOS: Record<string, string> = {
@@ -42,7 +62,10 @@ export default function ConsignacionesPage() {
   const [modalDetalleOpen, setModalDetalleOpen] = useState(false);
   const [consignacionSeleccionada, setConsignacionSeleccionada] = useState<Consignacion | null>(null);
 
-  const cargarDatos = useCallback(async () => {
+  const [inicializado, setInicializado] = useState(false);
+
+  // ==================== CARGA DE DATOS ====================
+  const cargarDatos = useCallback(async (mostrarToast = false) => {
     setLoading(true);
     try {
       const [consignacionesData, tiendasData] = await Promise.all([
@@ -52,20 +75,27 @@ export default function ConsignacionesPage() {
       setConsignaciones(consignacionesData);
       setTiendas(tiendasData);
       setError(null);
+      if (mostrarToast) {
+        toast.success("Datos actualizados", {
+          description: `${consignacionesData.length} consignaciones cargadas`,
+        });
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al cargar datos");
+      const mensaje = err instanceof Error ? err.message : "Error al cargar datos";
+      setError(mensaje);
+      toast.error("Error al cargar datos", { description: mensaje });
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Carga inicial sin useEffect - usando useState inicializador
-  const [inicializado, setInicializado] = useState(false);
+  // Carga inicial
   if (!inicializado) {
     setInicializado(true);
     cargarDatos();
   }
 
+  // ==================== FILTRADO ====================
   const consignacionesFiltradas = useMemo(() => {
     if (!busqueda.trim()) return consignaciones;
     const termino = busqueda.toLowerCase();
@@ -76,6 +106,7 @@ export default function ConsignacionesPage() {
     );
   }, [consignaciones, busqueda]);
 
+  // ==================== KPIs ====================
   const kpis = useMemo(() => {
     const total = consignaciones.length;
     const activas = consignaciones.filter(c => c.estado === 'ENVIADA' || c.estado === 'PARCIAL').length;
@@ -86,32 +117,79 @@ export default function ConsignacionesPage() {
     return { total, activas, completadas, valorTotal, valorVendido, valorPendiente };
   }, [consignaciones]);
 
+  // ==================== HANDLERS ====================
   const handleCrearConsignacion = useCallback(async (data: ConsignacionRequest) => {
-    await consignacionService.crear(data);
-    setModalConsignacionOpen(false);
-    cargarDatos();
+    const toastId = toast.loading("Creando consignación...");
+    try {
+      await consignacionService.crear(data);
+      toast.success("Consignación creada correctamente", { id: toastId });
+      setModalConsignacionOpen(false);
+      cargarDatos();
+    } catch (err) {
+      toast.error("Error al crear consignación", {
+        id: toastId,
+        description: err instanceof Error ? err.message : "Error desconocido",
+      });
+      throw err;
+    }
   }, [cargarDatos]);
 
   const handleCrearTienda = useCallback(async (tienda: TiendaAliada) => {
-    await tiendaAliadaService.guardar(tienda);
-    setModalTiendaOpen(false);
-    cargarDatos();
+    const toastId = toast.loading("Guardando tienda...");
+    try {
+      await tiendaAliadaService.guardar(tienda);
+      toast.success("Tienda guardada correctamente", { id: toastId });
+      setModalTiendaOpen(false);
+      cargarDatos();
+    } catch (err) {
+      toast.error("Error al guardar tienda", {
+        id: toastId,
+        description: err instanceof Error ? err.message : "Error desconocido",
+      });
+      throw err;
+    }
   }, [cargarDatos]);
 
   const handleRegistrarVenta = useCallback(async (data: VentaConsignacionRequest) => {
     if (!consignacionSeleccionada?.id) return;
-    await consignacionService.registrarVenta(consignacionSeleccionada.id, data);
-    setModalVentaOpen(false);
-    setConsignacionSeleccionada(null);
-    cargarDatos();
+    const toastId = toast.loading("Registrando venta...");
+    try {
+      await consignacionService.registrarVenta(consignacionSeleccionada.id, data);
+      toast.success("Venta registrada correctamente", {
+        id: toastId,
+        description: `Consignación: ${consignacionSeleccionada.numeroConsignacion}`,
+      });
+      setModalVentaOpen(false);
+      setConsignacionSeleccionada(null);
+      cargarDatos();
+    } catch (err) {
+      toast.error("Error al registrar venta", {
+        id: toastId,
+        description: err instanceof Error ? err.message : "Error desconocido",
+      });
+      throw err;
+    }
   }, [consignacionSeleccionada, cargarDatos]);
 
   const handleRegistrarDevolucion = useCallback(async (data: DevolucionConsignacionRequest) => {
     if (!consignacionSeleccionada?.id) return;
-    await consignacionService.registrarDevolucion(consignacionSeleccionada.id, data);
-    setModalDevolucionOpen(false);
-    setConsignacionSeleccionada(null);
-    cargarDatos();
+    const toastId = toast.loading("Registrando devolución...");
+    try {
+      await consignacionService.registrarDevolucion(consignacionSeleccionada.id, data);
+      toast.success("Devolución registrada correctamente", {
+        id: toastId,
+        description: `Consignación: ${consignacionSeleccionada.numeroConsignacion}`,
+      });
+      setModalDevolucionOpen(false);
+      setConsignacionSeleccionada(null);
+      cargarDatos();
+    } catch (err) {
+      toast.error("Error al registrar devolución", {
+        id: toastId,
+        description: err instanceof Error ? err.message : "Error desconocido",
+      });
+      throw err;
+    }
   }, [consignacionSeleccionada, cargarDatos]);
 
   const abrirVenta = useCallback((c: Consignacion) => {
@@ -132,6 +210,7 @@ export default function ConsignacionesPage() {
   return (
     <div className="space-y-6 text-slate-900">
       
+      {/* CABECERA */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
@@ -158,6 +237,7 @@ export default function ConsignacionesPage() {
         </div>
       </div>
 
+      {/* KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <KPICard titulo="Total" valor={kpis.total} icono={<Truck className="h-5 w-5" />} color="slate" />
         <KPICard titulo="Activas" valor={kpis.activas} icono={<ShoppingCart className="h-5 w-5" />} color="blue" />
@@ -167,6 +247,7 @@ export default function ConsignacionesPage() {
         <KPICard titulo="V. Pendiente" valor={`S/ ${kpis.valorPendiente.toFixed(0)}`} icono={<RotateCcw className="h-5 w-5" />} color="red" />
       </div>
 
+      {/* BÚSQUEDA */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
         <div className="relative w-full sm:w-96">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -179,7 +260,7 @@ export default function ConsignacionesPage() {
           />
         </div>
         <button
-          onClick={cargarDatos}
+          onClick={() => cargarDatos(true)}
           disabled={loading}
           className="flex items-center gap-2 text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-lg transition disabled:opacity-50"
         >
@@ -188,6 +269,7 @@ export default function ConsignacionesPage() {
         </button>
       </div>
 
+      {/* ERROR */}
       {error && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 text-sm text-red-700">
           <AlertCircle className="h-5 w-5 text-red-500 shrink-0" />
@@ -195,6 +277,7 @@ export default function ConsignacionesPage() {
         </div>
       )}
 
+      {/* TABLA */}
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -303,6 +386,7 @@ export default function ConsignacionesPage() {
         </div>
       </div>
 
+      {/* MODALES */}
       <ModalConsignacion
         isOpen={modalConsignacionOpen}
         onClose={() => setModalConsignacionOpen(false)}
@@ -351,6 +435,8 @@ export default function ConsignacionesPage() {
     </div>
   );
 }
+
+// ==================== COMPONENTES AUXILIARES ====================
 
 function KPICard({ 
   titulo, 

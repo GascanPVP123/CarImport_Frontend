@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 interface User {
   username: string;
@@ -22,8 +23,11 @@ const AuthContext = createContext<AuthContextType>({
   logout: () => {},
 });
 
+// ✅ Leer auth inicial del localStorage (solo cliente)
 const getInitialAuth = () => {
-  if (typeof window === "undefined") return { isAuthenticated: false, user: null };
+  if (typeof window === "undefined") {
+    return { isAuthenticated: false, user: null };
+  }
 
   const token = localStorage.getItem("token");
   const userData = localStorage.getItem("user");
@@ -43,25 +47,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [auth, setAuth] = useState(getInitialAuth);
   const router = useRouter();
 
+  // ✅ Login con toast de bienvenida
   const login = useCallback((token: string, user: User) => {
     localStorage.setItem("token", token);
     localStorage.setItem("user", JSON.stringify(user));
     setAuth({ isAuthenticated: true, user });
+
+    toast.success(`Bienvenido, ${user.username}`, {
+      description: "Has iniciado sesión correctamente",
+      duration: 3000,
+    });
   }, []);
 
+  // ✅ Logout con toast de despedida
   const logout = useCallback(() => {
-    // 1. Limpiar storage
+    // 1. Toast de despedida (antes de limpiar)
+    toast.info("Cerrando sesión...", {
+      description: "Hasta pronto 👋",
+      duration: 2000,
+    });
+
+    // 2. Limpiar storage
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     sessionStorage.clear();
 
-    // 2. Limpiar estado
+    // 3. Limpiar estado
     setAuth({ isAuthenticated: false, user: null });
 
-    // 3. Redirigir reemplazando la historia (evita volver atrás)
+    // 4. Redirigir reemplazando la historia (evita volver atrás)
     router.replace("/login");
 
-    // 4. Recargar para limpiar caché de componentes
+    // 5. Recargar para limpiar caché de componentes
     setTimeout(() => {
       window.location.href = "/login";
     }, 100);

@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { X, Package, DollarSign, Tag, Layers, Hash, Building2, Plus, Pencil } from "lucide-react";
 import { Producto } from "@/services/productoService";
 import { importadoraService, Importadora } from "@/services/importadoraService";
+import { toast } from "sonner";
 
 interface ModalProductoProps {
   isOpen: boolean;
@@ -132,45 +133,59 @@ function ModalProductoInner({
     importadoraId: productoEditar?.importadora?.id ?? productoEditar?.importadoraId ?? null,
   }));
 
-  const handleGuardarImportadora = async (e: React.FormEvent) => {
+  const handleGuardarImportadora = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     setErrorImp(null);
 
     if (!formImp.ruc.trim() || !formImp.razonSocial.trim()) {
       setErrorImp("El RUC y la Razón Social son obligatorios.");
+      toast.error("Campos incompletos", {
+        description: "El RUC y la Razón Social son obligatorios.",
+      });
       return;
     }
+
+    const toastId = toast.loading(
+      editandoImportadora ? "Actualizando importadora..." : "Creando importadora..."
+    );
 
     try {
       setGuardandoImp(true);
 
-      let result: Importadora;
+      let resultado: Importadora;
 
       if (editandoImportadora?.id) {
-        // ✅ Actualizar existente
-        result = await importadoraService.actualizar(editandoImportadora.id, {
+        resultado = await importadoraService.actualizar(editandoImportadora.id, {
           id: editandoImportadora.id,
           ruc: formImp.ruc.trim(),
           razonSocial: formImp.razonSocial.trim(),
           telefono: formImp.telefono.trim(),
         });
-        setImportadoras((prev) => prev.map((i) => (i.id === result.id ? result : i)));
+        setImportadoras((prev) =>
+          prev.map((i) => (i.id === resultado.id ? resultado : i))
+        );
+        toast.success("Importadora actualizada", { id: toastId });
       } else {
-        // ✅ Crear nueva
-        result = await importadoraService.guardar({
+        resultado = await importadoraService.guardar({
           ruc: formImp.ruc.trim(),
           razonSocial: formImp.razonSocial.trim(),
           telefono: formImp.telefono.trim(),
         });
-        setImportadoras((prev) => [...prev, result]);
+        setImportadoras((prev) => [...prev, resultado]);
+        toast.success("Importadora creada", { id: toastId });
       }
 
-      setForm((prev) => ({ ...prev, importadoraId: result.id }));
+      setForm((prev) => ({ ...prev, importadoraId: resultado.id }));
       setFormImp({ ruc: "", razonSocial: "", telefono: "" });
       setEditandoImportadora(null);
       setSubModalOpen(false);
     } catch (err: unknown) {
-      setErrorImp(err instanceof Error ? err.message : "Error al guardar la importadora.");
+      const mensaje = err instanceof Error ? err.message : "Error al guardar la importadora.";
+      setErrorImp(mensaje);
+      toast.error("Error al guardar importadora", {
+        id: toastId,
+        description: mensaje,
+      });
     } finally {
       setGuardandoImp(false);
     }

@@ -9,8 +9,10 @@ import {
 import { productoService } from "@/services/productoService";
 import { consignacionService } from "@/services/consignacionService";
 import { cuentaCorrienteService } from "@/services/cuentaCorrienteService";
+import { useToast } from "@/hooks/useToast";
 
 export default function DashboardPage() {
+  const toast = useToast();
   const [kpis, setKpis] = useState({
     productos: 0,
     stockBajo: 0,
@@ -22,20 +24,27 @@ export default function DashboardPage() {
 
   const cargarKPIs = async () => {
     try {
-      const [productos, stockBajo, consignaciones, cuentas] = await Promise.all([
+      const [productos, stockBajo, consignaciones, cuentas] = await Promise.allSettled([
         productoService.listar(),
         productoService.listarStockBajo(),
         consignacionService.listarActivas(),
         cuentaCorrienteService.obtenerResumen(),
       ]);
+
+      const productosData = productos.status === "fulfilled" ? productos.value : [];
+      const stockBajoData = stockBajo.status === "fulfilled" ? stockBajo.value : [];
+      const consignacionesData = consignaciones.status === "fulfilled" ? consignaciones.value : [];
+      const cuentasData = cuentas.status === "fulfilled" ? cuentas.value : { totalDebe: 0 };
+
       setKpis({
-        productos: productos.length,
-        stockBajo: stockBajo.length,
-        consignacionesActivas: consignaciones.length,
-        saldoPendiente: cuentas?.totalDebe || 0,
+        productos: productosData.length,
+        stockBajo: stockBajoData.length,
+        consignacionesActivas: consignacionesData.length,
+        saldoPendiente: cuentasData?.totalDebe || 0,
       });
     } catch (e) {
       console.error("Error al cargar KPIs:", e);
+      toast.error("Error al cargar métricas", "Verifica tu conexión a internet");
     } finally {
       setLoading(false);
     }
@@ -123,25 +132,54 @@ export default function DashboardPage() {
           <h1 className="text-3xl font-bold text-slate-900">Panel Principal</h1>
           <p className="text-slate-500 text-sm mt-1">Bienvenido al sistema de gestión CarImport</p>
         </div>
-        <Link href="/dashboard/cotizaciones" className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-emerald-700 transition shadow-sm">
+        <Link 
+          href="/dashboard/cotizaciones" 
+          className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-emerald-700 transition shadow-sm"
+        >
           <Plus className="h-4 w-4" /> Nueva Cotización
         </Link>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <KPICard label="Productos" value={loading ? "..." : kpis.productos} icon={<Package className="h-5 w-5" />} color="emerald" />
-        <KPICard label="Stock Bajo" value={loading ? "..." : kpis.stockBajo} icon={<AlertTriangle className="h-5 w-5" />} color="amber" />
-        <KPICard label="Consignaciones" value={loading ? "..." : kpis.consignacionesActivas} icon={<Truck className="h-5 w-5" />} color="blue" />
-        <KPICard label="Por Cobrar" value={loading ? "..." : `S/ ${kpis.saldoPendiente.toFixed(0)}`} icon={<DollarSign className="h-5 w-5" />} color="purple" />
+        <KPICard 
+          label="Productos" 
+          value={loading ? "..." : kpis.productos} 
+          icon={<Package className="h-5 w-5" />} 
+          color="emerald" 
+        />
+        <KPICard 
+          label="Stock Bajo" 
+          value={loading ? "..." : kpis.stockBajo} 
+          icon={<AlertTriangle className="h-5 w-5" />} 
+          color="amber" 
+        />
+        <KPICard 
+          label="Consignaciones" 
+          value={loading ? "..." : kpis.consignacionesActivas} 
+          icon={<Truck className="h-5 w-5" />} 
+          color="blue" 
+        />
+        <KPICard 
+          label="Por Cobrar" 
+          value={loading ? "..." : `S/ ${kpis.saldoPendiente.toFixed(0)}`} 
+          icon={<DollarSign className="h-5 w-5" />} 
+          color="purple" 
+        />
       </div>
 
       <div>
         <h2 className="text-lg font-bold text-slate-900 mb-4">Accesos Rápidos</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {modulos.map((mod) => (
-            <Link key={mod.href} href={mod.href} className={`p-5 border rounded-xl shadow-sm transition-all duration-200 group hover:shadow-md ${colores[mod.color]}`}>
+            <Link 
+              key={mod.href} 
+              href={mod.href} 
+              className={`p-5 border rounded-xl shadow-sm transition-all duration-200 group hover:shadow-md ${colores[mod.color]}`}
+            >
               <div className="flex items-center justify-between mb-3">
-                <div className={`p-2.5 rounded-lg ${iconosColores[mod.color]} group-hover:scale-110 transition`}>{mod.icono}</div>
+                <div className={`p-2.5 rounded-lg ${iconosColores[mod.color]} group-hover:scale-110 transition`}>
+                  {mod.icono}
+                </div>
                 <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition" />
               </div>
               <h3 className="font-bold text-slate-900">{mod.titulo}</h3>
@@ -159,8 +197,18 @@ export default function DashboardPage() {
             <p className="text-sm text-emerald-100 mt-1">Accesos directos a las funciones principales</p>
           </div>
           <div className="flex gap-3">
-            <Link href="/dashboard/cotizaciones" className="bg-white text-emerald-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-emerald-50 transition">Nueva Cotización</Link>
-            <Link href="/dashboard/productos" className="border border-white/50 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-white/10 transition">Ver Productos</Link>
+            <Link 
+              href="/dashboard/cotizaciones" 
+              className="bg-white text-emerald-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-emerald-50 transition"
+            >
+              Nueva Cotización
+            </Link>
+            <Link 
+              href="/dashboard/productos" 
+              className="border border-white/50 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-white/10 transition"
+            >
+              Ver Productos
+            </Link>
           </div>
         </div>
       </div>
@@ -168,13 +216,21 @@ export default function DashboardPage() {
   );
 }
 
-function KPICard({ label, value, icon, color }: { label: string; value: string | number; icon: React.ReactNode; color: string }) {
+function KPICard({ 
+  label, value, icon, color 
+}: { 
+  label: string; 
+  value: string | number; 
+  icon: React.ReactNode; 
+  color: string 
+}) {
   const colores: Record<string, string> = {
     emerald: "bg-emerald-100 text-emerald-600",
     amber: "bg-amber-100 text-amber-600",
     blue: "bg-blue-100 text-blue-600",
     purple: "bg-purple-100 text-purple-600",
   };
+  
   return (
     <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center gap-3">
       <div className={`p-2.5 rounded-lg ${colores[color]}`}>{icon}</div>
