@@ -29,7 +29,16 @@ import {
 import { productoService, Producto } from "@/services/productoService";
 import { ModalProducto } from "@/components/modales/ModalProducto";
 
-const COLORES_GRAFICO = ["#10B981", "#3B82F6", "#F59E0B", "#EC4899", "#8B5CF6", "#64748B"];
+const COLORES_GRAFICO = [
+  "#10B981", // Verde esmeralda
+  "#3B82F6", // Azul
+  "#F59E0B", // Ámbar
+  "#EC4899", // Rosa
+  "#8B5CF6", // Púrpura
+  "#06B6D4", // Cyan
+  "#F43F5E", // Rojo
+  "#84CC16", // Lima
+];
 
 export default function ProductosPage() {
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -238,47 +247,153 @@ export default function ProductosPage() {
         />
       </div>
 
-      {/* GRÁFICOS */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <GraficoCard titulo="Distribución por Importadora" icono={<Building2 className="h-4 w-4 text-emerald-600" />}>
-          {datosGraficoImportadora.length === 0 ? (
-            <EmptyChart mensaje="Sin datos de importadoras registrados" />
-          ) : (
+      {/* GRÁFICOS MODERNOS */}
+<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  
+  {/* DONUT: Distribución por Importadora */}
+  <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
+    <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center gap-2">
+        <div className="p-2 rounded-lg bg-emerald-100">
+          <Building2 className="h-4 w-4 text-emerald-600" />
+        </div>
+        <div>
+          <h4 className="text-sm font-bold text-slate-900">Distribución por Importadora</h4>
+          <p className="text-[11px] text-gray-400">Productos agrupados por proveedor</p>
+        </div>
+      </div>
+      <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
+        {productos.length} total
+      </span>
+    </div>
+
+    <div className="flex items-center gap-4">
+      {/* Donut */}
+      <div className="h-56 w-56 shrink-0 relative">
+        {datosGraficoImportadora.length === 0 ? (
+          <div className="h-full flex items-center justify-center text-xs text-slate-400 italic">
+            Sin datos
+          </div>
+        ) : (
+          <>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={datosGraficoImportadora}
                   cx="50%"
                   cy="50%"
-                  innerRadius={50}
-                  outerRadius={80}
-                  paddingAngle={5}
+                  innerRadius={60}
+                  outerRadius={95}
+                  paddingAngle={3}
                   dataKey="value"
                 >
                   {datosGraficoImportadora.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORES_GRAFICO[index % COLORES_GRAFICO.length]} />
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={COLORES_GRAFICO[index % COLORES_GRAFICO.length]}
+                    />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => [`${value} productos`, "Cantidad"]} />
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: "8px",
+                    border: "1px solid #e5e7eb",
+                    fontSize: "12px",
+                    boxShadow: "0 4px 6px rgba(0,0,0,0.05)",
+                  }}
+                />
               </PieChart>
             </ResponsiveContainer>
-          )}
-        </GraficoCard>
 
-        <GraficoCard titulo="Top 5 Productos con Menor Stock" icono={<AlertTriangle className="h-4 w-4 text-amber-500" />}>
-          {datosGraficoStockBajo.length === 0 ? (
-            <EmptyChart mensaje="Sin productos en catálogo" />
-          ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={datosGraficoStockBajo} layout="vertical">
-                <XAxis type="number" />
-                <YAxis dataKey="nombre" type="category" width={110} tick={{ fontSize: 11 }} />
-                <Tooltip formatter={(value) => [`${value} unidades`, "Stock"]} />
-                <Bar dataKey="stock" fill="#F59E0B" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </GraficoCard>
+            {/* Centro del donut */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <p className="text-2xl font-bold text-slate-900">{productos.length}</p>
+              <p className="text-[10px] text-gray-400 uppercase">Productos</p>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Leyenda */}
+      <div className="flex-1 space-y-2">
+        {datosGraficoImportadora.map((item, idx) => {
+          const porcentaje = ((item.value / productos.length) * 100).toFixed(1);
+          return (
+            <div key={idx} className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <div
+                  className="w-3 h-3 rounded-full shrink-0"
+                  style={{ backgroundColor: COLORES_GRAFICO[idx % COLORES_GRAFICO.length] }}
+                />
+                <span className="text-xs text-gray-700 truncate">{item.name}</span>
+              </div>
+              <div className="text-right">
+                <p className="text-xs font-bold text-slate-900">{item.value}</p>
+                <p className="text-[10px] text-gray-400">{porcentaje}%</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  </div>
+
+        {/* BARRAS: Top 5 Menor Stock */}
+        <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-amber-100">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-slate-900">Top 5 Menor Stock</h4>
+                <p className="text-[11px] text-gray-400">Productos que requieren reposición</p>
+              </div>
+            </div>
+            <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
+              Alerta
+            </span>
+          </div>
+
+          <div className="h-56 w-full">
+            {datosGraficoStockBajo.length === 0 ? (
+              <div className="h-full flex items-center justify-center text-xs text-slate-400 italic">
+                Sin productos con stock bajo
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={datosGraficoStockBajo}
+                  layout="vertical"
+                  margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
+                >
+                  <XAxis type="number" stroke="#94a3b8" fontSize={11} />
+                  <YAxis
+                    dataKey="nombre"
+                    type="category"
+                    width={120}
+                    tick={{ fontSize: 10, fill: "#64748b" }}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      borderRadius: "8px",
+                      border: "1px solid #e5e7eb",
+                      fontSize: "12px",
+                      boxShadow: "0 4px 6px rgba(0,0,0,0.05)",
+                    }}
+                    formatter={(value) => [`${value} unidades`, "Stock"]}
+                  />
+                  <Bar dataKey="stock" radius={[0, 8, 8, 0]}>
+                    {datosGraficoStockBajo.map((entry, index) => {
+                      const color = entry.stock <= 3 ? "#ef4444" : entry.stock <= 8 ? "#f59e0b" : "#10b981";
+                      return <Cell key={`cell-${index}`} fill={color} />;
+                    })}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* BARRA DE BÚSQUEDA */}
