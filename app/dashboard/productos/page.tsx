@@ -2,42 +2,20 @@
 
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { 
-  Plus, 
-  Search, 
-  Edit2, 
-  Trash2, 
-  Package, 
-  RefreshCw, 
-  AlertCircle, 
-  Building2, 
-  AlertTriangle, 
-  DollarSign, 
-  Boxes 
+  Plus, Search, Edit2, Trash2, Package, RefreshCw, 
+  AlertCircle, Building2, AlertTriangle, DollarSign, Boxes,
+  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight
 } from "lucide-react";
 import { 
-  PieChart, 
-  Pie, 
-  Cell, 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  Tooltip, 
-  ResponsiveContainer 
+  PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer 
 } from "recharts";
 
 import { productoService, Producto } from "@/services/productoService";
 import { ModalProducto } from "@/components/modales/ModalProducto";
 
 const COLORES_GRAFICO = [
-  "#10B981", // Verde esmeralda
-  "#3B82F6", // Azul
-  "#F59E0B", // Ámbar
-  "#EC4899", // Rosa
-  "#8B5CF6", // Púrpura
-  "#06B6D4", // Cyan
-  "#F43F5E", // Rojo
-  "#84CC16", // Lima
+  "#10B981", "#3B82F6", "#F59E0B", "#EC4899", 
+  "#8B5CF6", "#06B6D4", "#F43F5E", "#84CC16"
 ];
 
 export default function ProductosPage() {
@@ -50,7 +28,11 @@ export default function ProductosPage() {
   const [modalOpen, setModalOpen] = useState<boolean>(false);
   const [productoEditar, setProductoEditar] = useState<Producto | null>(null);
 
-  // Cargar productos al montar
+  // Paginación
+  const [paginaActual, setPaginaActual] = useState(1);
+  const [itemsPorPagina, setItemsPorPagina] = useState(10);
+
+  // Cargar productos
   useEffect(() => {
     let ignore = false;
 
@@ -67,20 +49,15 @@ export default function ProductosPage() {
           setError(err instanceof Error ? err.message : "Error al obtener productos.");
         }
       } finally {
-        if (!ignore) {
-          setLoading(false);
-        }
+        if (!ignore) setLoading(false);
       }
     };
 
     cargarProductos();
-
-    return () => {
-      ignore = true;
-    };
+    return () => { ignore = true; };
   }, []);
 
-  // Recargar productos manualmente
+  // Recargar
   const handleRecargar = useCallback(async () => {
     setLoading(true);
     try {
@@ -94,19 +71,17 @@ export default function ProductosPage() {
     }
   }, []);
 
-  // Abrir modal para nuevo producto
+  // Modales
   const handleNuevoProducto = useCallback(() => {
     setProductoEditar(null);
     setModalOpen(true);
   }, []);
 
-  // Abrir modal para editar producto
   const handleEditarProducto = useCallback((prod: Producto) => {
     setProductoEditar(prod);
     setModalOpen(true);
   }, []);
 
-  // Eliminar producto
   const handleEliminarProducto = useCallback(async (id?: number) => {
     if (!id) return;
     if (!confirm("¿Estás seguro de que deseas eliminar este producto?")) return;
@@ -119,14 +94,11 @@ export default function ProductosPage() {
     }
   }, []);
 
-  // Guardar o actualizar producto
   const handleGuardarProducto = useCallback(async (productoForm: Producto) => {
     try {
       if (productoForm.id) {
         const actualizado = await productoService.actualizar(productoForm.id, productoForm);
-        setProductos((prev) =>
-          prev.map((p) => (p.id === actualizado.id ? actualizado : p))
-        );
+        setProductos((prev) => prev.map((p) => (p.id === actualizado.id ? actualizado : p)));
       } else {
         const nuevo = await productoService.guardar(productoForm);
         setProductos((prev) => [...prev, nuevo]);
@@ -137,7 +109,6 @@ export default function ProductosPage() {
     }
   }, []);
 
-  // Cerrar modal
   const handleCerrarModal = useCallback(() => {
     setModalOpen(false);
     setProductoEditar(null);
@@ -156,7 +127,24 @@ export default function ProductosPage() {
     });
   }, [productos, busqueda]);
 
-  // Cálculo de KPIs
+  // ✅ PAGINACIÓN
+  const totalPaginas = Math.max(1, Math.ceil(productosFiltrados.length / itemsPorPagina));
+  const indiceInicio = (paginaActual - 1) * itemsPorPagina;
+  const indiceFin = indiceInicio + itemsPorPagina;
+
+  const productosPaginados = useMemo(() => {
+    return productosFiltrados.slice(indiceInicio, indiceFin);
+  }, [productosFiltrados, indiceInicio, indiceFin]);
+
+
+  const irAPagina = useCallback((pagina: number) => {
+    if (pagina >= 1 && pagina <= totalPaginas) {
+      setPaginaActual(pagina);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [totalPaginas]);
+
+  // KPIs
   const kpis = useMemo(() => {
     const totalProductos = productos.length;
     const stockTotal = productos.reduce((acc, p) => acc + (p.stock || 0), 0);
@@ -165,26 +153,19 @@ export default function ProductosPage() {
       (acc, p) => acc + (p.stock || 0) * (p.precioMenor || p.precioVenta || 0),
       0
     );
-
     return { totalProductos, stockTotal, bajoStock, valorizacionTotal };
   }, [productos]);
 
-  // Datos para gráfico por importadora
+  // Datos gráficos
   const datosGraficoImportadora = useMemo(() => {
     const mapa: Record<string, number> = {};
-
     productos.forEach((p) => {
       const nombreImp = p.importadora?.razonSocial || "Sin Importadora";
       mapa[nombreImp] = (mapa[nombreImp] || 0) + 1;
     });
-
-    return Object.keys(mapa).map((key) => ({
-      name: key,
-      value: mapa[key],
-    }));
+    return Object.keys(mapa).map((key) => ({ name: key, value: mapa[key] }));
   }, [productos]);
 
-  // Datos para gráfico de stock bajo (Top 5)
   const datosGraficoStockBajo = useMemo(() => {
     return [...productos]
       .sort((a, b) => (a.stock || 0) - (b.stock || 0))
@@ -218,7 +199,7 @@ export default function ProductosPage() {
         </button>
       </div>
 
-      {/* TARJETAS KPI */}
+      {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
           titulo="Total Productos"
@@ -247,153 +228,10 @@ export default function ProductosPage() {
         />
       </div>
 
-      {/* GRÁFICOS MODERNOS */}
-<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-  
-  {/* DONUT: Distribución por Importadora */}
-  <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
-    <div className="flex items-center justify-between mb-4">
-      <div className="flex items-center gap-2">
-        <div className="p-2 rounded-lg bg-emerald-100">
-          <Building2 className="h-4 w-4 text-emerald-600" />
-        </div>
-        <div>
-          <h4 className="text-sm font-bold text-slate-900">Distribución por Importadora</h4>
-          <p className="text-[11px] text-gray-400">Productos agrupados por proveedor</p>
-        </div>
-      </div>
-      <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
-        {productos.length} total
-      </span>
-    </div>
-
-    <div className="flex items-center gap-4">
-      {/* Donut */}
-      <div className="h-56 w-56 shrink-0 relative">
-        {datosGraficoImportadora.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-xs text-slate-400 italic">
-            Sin datos
-          </div>
-        ) : (
-          <>
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={datosGraficoImportadora}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={95}
-                  paddingAngle={3}
-                  dataKey="value"
-                >
-                  {datosGraficoImportadora.map((_, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={COLORES_GRAFICO[index % COLORES_GRAFICO.length]}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    borderRadius: "8px",
-                    border: "1px solid #e5e7eb",
-                    fontSize: "12px",
-                    boxShadow: "0 4px 6px rgba(0,0,0,0.05)",
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-
-            {/* Centro del donut */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <p className="text-2xl font-bold text-slate-900">{productos.length}</p>
-              <p className="text-[10px] text-gray-400 uppercase">Productos</p>
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Leyenda */}
-      <div className="flex-1 space-y-2">
-        {datosGraficoImportadora.map((item, idx) => {
-          const porcentaje = ((item.value / productos.length) * 100).toFixed(1);
-          return (
-            <div key={idx} className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 min-w-0 flex-1">
-                <div
-                  className="w-3 h-3 rounded-full shrink-0"
-                  style={{ backgroundColor: COLORES_GRAFICO[idx % COLORES_GRAFICO.length] }}
-                />
-                <span className="text-xs text-gray-700 truncate">{item.name}</span>
-              </div>
-              <div className="text-right">
-                <p className="text-xs font-bold text-slate-900">{item.value}</p>
-                <p className="text-[10px] text-gray-400">{porcentaje}%</p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  </div>
-
-        {/* BARRAS: Top 5 Menor Stock */}
-        <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-amber-100">
-                <AlertTriangle className="h-4 w-4 text-amber-600" />
-              </div>
-              <div>
-                <h4 className="text-sm font-bold text-slate-900">Top 5 Menor Stock</h4>
-                <p className="text-[11px] text-gray-400">Productos que requieren reposición</p>
-              </div>
-            </div>
-            <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
-              Alerta
-            </span>
-          </div>
-
-          <div className="h-56 w-full">
-            {datosGraficoStockBajo.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-xs text-slate-400 italic">
-                Sin productos con stock bajo
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={datosGraficoStockBajo}
-                  layout="vertical"
-                  margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
-                >
-                  <XAxis type="number" stroke="#94a3b8" fontSize={11} />
-                  <YAxis
-                    dataKey="nombre"
-                    type="category"
-                    width={120}
-                    tick={{ fontSize: 10, fill: "#64748b" }}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: "8px",
-                      border: "1px solid #e5e7eb",
-                      fontSize: "12px",
-                      boxShadow: "0 4px 6px rgba(0,0,0,0.05)",
-                    }}
-                    formatter={(value) => [`${value} unidades`, "Stock"]}
-                  />
-                  <Bar dataKey="stock" radius={[0, 8, 8, 0]}>
-                    {datosGraficoStockBajo.map((entry, index) => {
-                      const color = entry.stock <= 3 ? "#ef4444" : entry.stock <= 8 ? "#f59e0b" : "#10b981";
-                      return <Cell key={`cell-${index}`} fill={color} />;
-                    })}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
+      {/* GRÁFICOS */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <GraficoDonut data={datosGraficoImportadora} totalProductos={productos.length} />
+        <GraficoStockBajo data={datosGraficoStockBajo} />
       </div>
 
       {/* BARRA DE BÚSQUEDA */}
@@ -403,7 +241,10 @@ export default function ProductosPage() {
           <input
             type="text"
             value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
+            onChange={(e) => {
+              setBusqueda(e.target.value);
+              setPaginaActual(1);  
+            }}
             placeholder="Buscar por SKU, nombre o importadora..."
             className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
@@ -419,7 +260,7 @@ export default function ProductosPage() {
         </button>
       </div>
 
-      {/* MENSAJE DE ERROR */}
+      {/* ERROR */}
       {error && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 text-sm text-red-700">
           <AlertCircle className="h-5 w-5 text-red-500 shrink-0" />
@@ -427,7 +268,7 @@ export default function ProductosPage() {
         </div>
       )}
 
-      {/* TABLA DE PRODUCTOS */}
+      {/* TABLA */}
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -461,7 +302,7 @@ export default function ProductosPage() {
                   </td>
                 </tr>
               ) : (
-                productosFiltrados.map((p) => (
+                productosPaginados.map((p) => (
                   <FilaProducto
                     key={p.id}
                     producto={p}
@@ -473,6 +314,23 @@ export default function ProductosPage() {
             </tbody>
           </table>
         </div>
+
+        {/* ✅ PAGINACIÓN */}
+        {!loading && productosFiltrados.length > 0 && (
+          <Paginacion
+            paginaActual={paginaActual}
+            totalPaginas={totalPaginas}
+            itemsPorPagina={itemsPorPagina}
+            totalItems={productosFiltrados.length}
+            indiceInicio={indiceInicio}
+            indiceFin={indiceFin}
+            onCambiarPagina={irAPagina}
+            onCambiarItemsPorPagina={(n) => {
+              setItemsPorPagina(n);
+              setPaginaActual(1);
+            }}
+          />
+        )}
       </div>
 
       {/* MODAL */}
@@ -489,12 +347,144 @@ export default function ProductosPage() {
 
 // ==================== COMPONENTES AUXILIARES ====================
 
+function Paginacion({
+  paginaActual,
+  totalPaginas,
+  itemsPorPagina,
+  totalItems,
+  indiceInicio,
+  indiceFin,
+  onCambiarPagina,
+  onCambiarItemsPorPagina,
+}: {
+  paginaActual: number;
+  totalPaginas: number;
+  itemsPorPagina: number;
+  totalItems: number;
+  indiceInicio: number;
+  indiceFin: number;
+  onCambiarPagina: (p: number) => void;
+  onCambiarItemsPorPagina: (n: number) => void;
+}) {
+  // Calcular páginas visibles con elipsis
+  const paginasVisibles = useMemo(() => {
+    const paginas: (number | string)[] = [];
+    const maxVisible = 5;
+
+    if (totalPaginas <= maxVisible) {
+      for (let i = 1; i <= totalPaginas; i++) paginas.push(i);
+    } else if (paginaActual <= 3) {
+      for (let i = 1; i <= 4; i++) paginas.push(i);
+      paginas.push("...");
+      paginas.push(totalPaginas);
+    } else if (paginaActual >= totalPaginas - 2) {
+      paginas.push(1);
+      paginas.push("...");
+      for (let i = totalPaginas - 3; i <= totalPaginas; i++) paginas.push(i);
+    } else {
+      paginas.push(1);
+      paginas.push("...");
+      paginas.push(paginaActual - 1);
+      paginas.push(paginaActual);
+      paginas.push(paginaActual + 1);
+      paginas.push("...");
+      paginas.push(totalPaginas);
+    }
+    return paginas;
+  }, [paginaActual, totalPaginas]);
+
+  return (
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-3 bg-gray-50 border-t border-gray-200">
+      
+      {/* Info + Selector */}
+      <div className="flex items-center gap-4 text-xs text-gray-600">
+        <span>
+          Mostrando <span className="font-bold text-slate-900">{indiceInicio + 1}</span> -{" "}
+          <span className="font-bold text-slate-900">
+            {Math.min(indiceFin, totalItems)}
+          </span>{" "}
+          de <span className="font-bold text-slate-900">{totalItems}</span> productos
+        </span>
+
+        <div className="flex items-center gap-2">
+          <span className="hidden sm:inline">Mostrar:</span>
+          <select
+            value={itemsPorPagina}
+            onChange={(e) => onCambiarItemsPorPagina(Number(e.target.value))}
+            className="px-2 py-1 text-xs border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+            <option value={10}>10</option>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Navegación */}
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => onCambiarPagina(1)}
+          disabled={paginaActual === 1}
+          className="p-1.5 text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+          title="Primera página"
+        >
+          <ChevronsLeft className="h-4 w-4" />
+        </button>
+
+        <button
+          onClick={() => onCambiarPagina(paginaActual - 1)}
+          disabled={paginaActual === 1}
+          className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+        >
+          <ChevronLeft className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Anterior</span>
+        </button>
+
+        <div className="flex items-center gap-1 mx-1">
+          {paginasVisibles.map((p, idx) =>
+            typeof p === "number" ? (
+              <button
+                key={idx}
+                onClick={() => onCambiarPagina(p)}
+                className={`min-w-[32px] px-2 py-1.5 text-xs font-bold rounded-lg transition ${
+                  p === paginaActual
+                    ? "bg-emerald-600 text-white shadow-sm"
+                    : "text-gray-600 bg-white border border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                {p}
+              </button>
+            ) : (
+              <span key={idx} className="px-1 text-xs text-gray-400">…</span>
+            )
+          )}
+        </div>
+
+        <button
+          onClick={() => onCambiarPagina(paginaActual + 1)}
+          disabled={paginaActual === totalPaginas}
+          className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+        >
+          <span className="hidden sm:inline">Siguiente</span>
+          <ChevronRight className="h-3.5 w-3.5" />
+        </button>
+
+        <button
+          onClick={() => onCambiarPagina(totalPaginas)}
+          disabled={paginaActual === totalPaginas}
+          className="p-1.5 text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+          title="Última página"
+        >
+          <ChevronsRight className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function KPICard({ 
-  titulo, 
-  valor, 
-  icono, 
-  color,
-  valorColor 
+  titulo, valor, icono, color, valorColor 
 }: { 
   titulo: string; 
   valor: string | number; 
@@ -513,51 +503,138 @@ function KPICard({
     <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
       <div>
         <p className="text-xs font-semibold text-slate-500">{titulo}</p>
-        <h3 className={`text-2xl font-bold ${valorColor || "text-slate-900"}`}>
-          {valor}
-        </h3>
+        <h3 className={`text-2xl font-bold ${valorColor || "text-slate-900"}`}>{valor}</h3>
       </div>
-      <div className={`p-3 rounded-lg ${colores[color]}`}>
-        {icono}
+      <div className={`p-3 rounded-lg ${colores[color]}`}>{icono}</div>
+    </div>
+  );
+}
+
+function GraficoDonut({ data, totalProductos }: { data: { name: string; value: number }[]; totalProductos: number }) {
+  return (
+    <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <div className="p-2 rounded-lg bg-emerald-100">
+            <Building2 className="h-4 w-4 text-emerald-600" />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-slate-900">Distribución por Importadora</h4>
+            <p className="text-[11px] text-gray-400">Productos agrupados por proveedor</p>
+          </div>
+        </div>
+        <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
+          {totalProductos} total
+        </span>
+      </div>
+
+      <div className="flex items-center gap-4">
+        <div className="h-56 w-56 shrink-0 relative">
+          {data.length === 0 ? (
+            <div className="h-full flex items-center justify-center text-xs text-slate-400 italic">Sin datos</div>
+          ) : (
+            <>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={data} cx="50%" cy="50%" innerRadius={60} outerRadius={95} paddingAngle={3} dataKey="value">
+                    {data.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORES_GRAFICO[index % COLORES_GRAFICO.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      borderRadius: "8px",
+                      border: "1px solid #e5e7eb",
+                      fontSize: "12px",
+                      boxShadow: "0 4px 6px rgba(0,0,0,0.05)",
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <p className="text-2xl font-bold text-slate-900">{totalProductos}</p>
+                <p className="text-[10px] text-gray-400 uppercase">Productos</p>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="flex-1 space-y-2 overflow-y-auto max-h-56">
+          {data.map((item, idx) => {
+            const porcentaje = ((item.value / totalProductos) * 100).toFixed(1);
+            return (
+              <div key={idx} className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <div
+                    className="w-3 h-3 rounded-full shrink-0"
+                    style={{ backgroundColor: COLORES_GRAFICO[idx % COLORES_GRAFICO.length] }}
+                  />
+                  <span className="text-xs text-gray-700 truncate">{item.name}</span>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs font-bold text-slate-900">{item.value}</p>
+                  <p className="text-[10px] text-gray-400">{porcentaje}%</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
 }
 
-function GraficoCard({ 
-  titulo, 
-  icono, 
-  children 
-}: { 
-  titulo: string; 
-  icono: React.ReactNode; 
-  children: React.ReactNode;
-}) {
+function GraficoStockBajo({ data }: { data: { nombre: string; stock: number }[] }) {
   return (
-    <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-      <h4 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
-        {icono}
-        {titulo}
-      </h4>
-      <div className="h-60 w-full">
-        {children}
+    <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <div className="p-2 rounded-lg bg-amber-100">
+            <AlertTriangle className="h-4 w-4 text-amber-600" />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-slate-900">Top 5 Menor Stock</h4>
+            <p className="text-[11px] text-gray-400">Productos que requieren reposición</p>
+          </div>
+        </div>
+        <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-full">Alerta</span>
       </div>
-    </div>
-  );
-}
 
-function EmptyChart({ mensaje }: { mensaje: string }) {
-  return (
-    <div className="h-full flex items-center justify-center text-xs text-slate-400 italic">
-      {mensaje}
+      <div className="h-56 w-full">
+        {data.length === 0 ? (
+          <div className="h-full flex items-center justify-center text-xs text-slate-400 italic">
+            Sin productos con stock bajo
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data} layout="vertical" margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+              <XAxis type="number" stroke="#94a3b8" fontSize={11} />
+              <YAxis dataKey="nombre" type="category" width={120} tick={{ fontSize: 10, fill: "#64748b" }} />
+              <Tooltip
+                contentStyle={{
+                  borderRadius: "8px",
+                  border: "1px solid #e5e7eb",
+                  fontSize: "12px",
+                  boxShadow: "0 4px 6px rgba(0,0,0,0.05)",
+                }}
+                formatter={(value) => [`${value} unidades`, "Stock"]}
+              />
+              <Bar dataKey="stock" radius={[0, 8, 8, 0]}>
+                {data.map((entry, index) => {
+                  const color = entry.stock <= 3 ? "#ef4444" : entry.stock <= 8 ? "#f59e0b" : "#10b981";
+                  return <Cell key={`cell-${index}`} fill={color} />;
+                })}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </div>
     </div>
   );
 }
 
 function FilaProducto({ 
-  producto, 
-  onEditar, 
-  onEliminar 
+  producto, onEditar, onEliminar 
 }: { 
   producto: Producto; 
   onEditar: (prod: Producto) => void; 
@@ -575,9 +652,7 @@ function FilaProducto({
       <td className="py-3 px-4">
         <div className="font-medium text-slate-900">{producto.nombre}</div>
         {producto.descripcion && (
-          <div className="text-xs text-slate-400 truncate max-w-xs">
-            {producto.descripcion}
-          </div>
+          <div className="text-xs text-slate-400 truncate max-w-xs">{producto.descripcion}</div>
         )}
       </td>
 
