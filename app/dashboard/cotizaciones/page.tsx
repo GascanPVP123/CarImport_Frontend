@@ -19,6 +19,12 @@ const COLORES = {
   amber: "bg-amber-600 hover:bg-amber-700",
 };
 
+const ICONO_COLORES = {
+  red: "bg-red-100 text-red-600",
+  emerald: "bg-emerald-100 text-emerald-600",
+  amber: "bg-amber-100 text-amber-600",
+};
+
 export function ModalConfirmDialog({
   titulo,
   mensaje,
@@ -44,8 +50,8 @@ export function ModalConfirmDialog({
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-200 animate-in fade-in zoom-in duration-150">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-full bg-red-100">
-              <AlertTriangle className="h-5 w-5 text-red-600" />
+            <div className={`p-2 rounded-full ${ICONO_COLORES[colorConfirmar]}`}>
+              <AlertTriangle className="h-5 w-5" />
             </div>
             <h3 className="font-bold text-base text-slate-900">{titulo}</h3>
           </div>
