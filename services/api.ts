@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://carimport-backend-e9fx.onrender.com/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://carimport-backend-e9fx.onrender.com/api/v1";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
 
@@ -9,7 +9,6 @@ interface RequestOptions {
 }
 
 export async function apiRequest<T>(endpoint: string, options: RequestOptions): Promise<T> {
-  // 1. Evitar errores de "localStorage is not defined" en el servidor de Next.js
   const isBrowser = typeof window !== "undefined";
   const token = isBrowser ? localStorage.getItem("token") : null;
 
@@ -21,7 +20,6 @@ export async function apiRequest<T>(endpoint: string, options: RequestOptions): 
 
   console.log(`[API Request] ${options.method} ${endpoint} | Token: ${token ? "Sí" : "No"}`);
 
-  // 2. Normalizar la URL para evitar dobles slashes (ej: api//productos)
   const baseUrl = API_URL.replace(/\/$/, "");
   const path = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
 
@@ -32,7 +30,6 @@ export async function apiRequest<T>(endpoint: string, options: RequestOptions): 
       body: options.body ? JSON.stringify(options.body) : undefined,
     });
 
-    // 3. Manejo de expiración o falta de permisos
     if (response.status === 401 || response.status === 403) {
       console.error("Auth error:", response.status);
       if (isBrowser) {
@@ -44,7 +41,6 @@ export async function apiRequest<T>(endpoint: string, options: RequestOptions): 
       throw new Error("Sesión expirada o permisos insuficientes");
     }
 
-    // 4. Manejo de errores de servidor o cliente (400, 500)
     if (!response.ok) {
       let errorMessage = "Error en la petición";
       try {
@@ -56,7 +52,6 @@ export async function apiRequest<T>(endpoint: string, options: RequestOptions): 
       throw new Error(errorMessage);
     }
 
-    // 5. Respuestas sin contenido
     if (response.status === 204) {
       return undefined as T;
     }

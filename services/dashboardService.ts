@@ -1,3 +1,5 @@
+import { apiRequest } from "./api";
+
 export interface KpiDTO {
   ventasDelMes: number;
   porcentajeVariacionVentas: number;
@@ -44,24 +46,9 @@ export interface DashboardEjecutivoResponse {
   ultimasOperaciones: OperacionRecienteDTO[];
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://carimport-backend-e9fx.onrender.com/api/v1';
-
 export const dashboardService = {
-  obtenerEjecutivo: async (anio = 2026, mes = 10): Promise<DashboardEjecutivoResponse> => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-
-    const response = await fetch(`${API_BASE_URL}/dashboard/ejecutivo?anio=${anio}&mes=${mes}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`Error en el servidor: HTTP ${response.status} (${response.statusText})`);
-    }
-
-    return response.json();
-  }
+  obtenerEjecutivo: (anio = 2026, mes = 10) =>
+    apiRequest<DashboardEjecutivoResponse>(`/dashboard/ejecutivo?anio=${anio}&mes=${mes}`, {
+      method: "GET",
+    }),
 };
