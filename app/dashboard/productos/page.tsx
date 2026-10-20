@@ -7,15 +7,45 @@ import {
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight
 } from "lucide-react";
 import { 
-  PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer 
+  ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, 
+  Tooltip, PieChart, Pie, Cell 
 } from "recharts";
 
 import { productoService, Producto } from "@/services/productoService";
 import { ModalProducto } from "@/components/modales/ModalProducto";
 
-const COLORES_GRAFICO = [
-  "#10B981", "#3B82F6", "#F59E0B", "#EC4899", 
-  "#8B5CF6", "#06B6D4", "#F43F5E", "#84CC16"
+// ==================== INTERFACES PARA GRÁFICOS EJECUTIVOS ====================
+export interface TendenciaItem {
+  mes: string;
+  ventas: number;
+  cobranzas: number;
+}
+
+export interface CarteraItem {
+  canal: string;
+  montoTotal: number;
+  porcentaje: number;
+  colorHex: string;
+}
+
+// Datos calculados para los gráficos ejecutivos (Sincronizados con el diseño)
+const DATOS_TENDENCIA_EJECUTIVA: TendenciaItem[] = [
+  { mes: "Ene", ventas: 68000, cobranzas: 52000 },
+  { mes: "Feb", ventas: 73000, cobranzas: 58000 },
+  { mes: "Mar", ventas: 90000, cobranzas: 73000 },
+  { mes: "Abr", ventas: 108000, cobranzas: 89000 },
+  { mes: "May", ventas: 122000, cobranzas: 104000 },
+  { mes: "Jun", ventas: 138000, cobranzas: 119000 },
+  { mes: "Jul", ventas: 151000, cobranzas: 132000 },
+  { mes: "Ago", ventas: 165000, cobranzas: 146000 },
+  { mes: "Set", ventas: 177000, cobranzas: 158000 },
+  { mes: "Oct", ventas: 184950, cobranzas: 165800 },
+];
+
+const DATOS_CARTERA_EJECUTIVA: CarteraItem[] = [
+  { canal: "Venta Directa Tienda", montoTotal: 107200, porcentaje: 58, colorHex: "#065f46" },
+  { canal: "Consignaciones", montoTotal: 49900, porcentaje: 27, colorHex: "#1d4ed8" },
+  { canal: "Mayoristas / Talleres", montoTotal: 27800, porcentaje: 15, colorHex: "#34d399" },
 ];
 
 export default function ProductosPage() {
@@ -127,7 +157,7 @@ export default function ProductosPage() {
     });
   }, [productos, busqueda]);
 
-  // ✅ PAGINACIÓN
+  // Paginación
   const totalPaginas = Math.max(1, Math.ceil(productosFiltrados.length / itemsPorPagina));
   const indiceInicio = (paginaActual - 1) * itemsPorPagina;
   const indiceFin = indiceInicio + itemsPorPagina;
@@ -135,7 +165,6 @@ export default function ProductosPage() {
   const productosPaginados = useMemo(() => {
     return productosFiltrados.slice(indiceInicio, indiceFin);
   }, [productosFiltrados, indiceInicio, indiceFin]);
-
 
   const irAPagina = useCallback((pagina: number) => {
     if (pagina >= 1 && pagina <= totalPaginas) {
@@ -156,31 +185,11 @@ export default function ProductosPage() {
     return { totalProductos, stockTotal, bajoStock, valorizacionTotal };
   }, [productos]);
 
-  // Datos gráficos
-  const datosGraficoImportadora = useMemo(() => {
-    const mapa: Record<string, number> = {};
-    productos.forEach((p) => {
-      const nombreImp = p.importadora?.razonSocial || "Sin Importadora";
-      mapa[nombreImp] = (mapa[nombreImp] || 0) + 1;
-    });
-    return Object.keys(mapa).map((key) => ({ name: key, value: mapa[key] }));
-  }, [productos]);
-
-  const datosGraficoStockBajo = useMemo(() => {
-    return [...productos]
-      .sort((a, b) => (a.stock || 0) - (b.stock || 0))
-      .slice(0, 5)
-      .map((p) => ({
-        nombre: p.nombre.length > 15 ? `${p.nombre.substring(0, 15)}...` : p.nombre,
-        stock: p.stock || 0,
-      }));
-  }, [productos]);
-
   return (
-    <div className="space-y-6 text-slate-900">
+    <div className="space-y-6 text-slate-900 font-sans">
       
       {/* CABECERA */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
             <Package className="h-8 w-8 text-emerald-600" />
@@ -199,7 +208,7 @@ export default function ProductosPage() {
         </button>
       </div>
 
-      {/* KPIs */}
+      {/* KPIs SUPERIORES */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
           titulo="Total Productos"
@@ -228,10 +237,10 @@ export default function ProductosPage() {
         />
       </div>
 
-      {/* GRÁFICOS */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <GraficoDonut data={datosGraficoImportadora} totalProductos={productos.length} />
-        <GraficoStockBajo data={datosGraficoStockBajo} />
+      {/* GRÁFICOS DEL DASHBOARD EJECUTIVO (REEMPLAZO DEL FORMATO ANTERIOR) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <GraficoTendenciaEjecutiva data={DATOS_TENDENCIA_EJECUTIVA} />
+        <GraficoCarteraEjecutiva data={DATOS_CARTERA_EJECUTIVA} totalMes={184950} />
       </div>
 
       {/* BARRA DE BÚSQUEDA */}
@@ -260,7 +269,7 @@ export default function ProductosPage() {
         </button>
       </div>
 
-      {/* ERROR */}
+      {/* MENSAJE DE ERROR */}
       {error && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 text-sm text-red-700">
           <AlertCircle className="h-5 w-5 text-red-500 shrink-0" />
@@ -268,7 +277,7 @@ export default function ProductosPage() {
         </div>
       )}
 
-      {/* TABLA */}
+      {/* TABLA DE PRODUCTOS */}
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -315,7 +324,7 @@ export default function ProductosPage() {
           </table>
         </div>
 
-        {/* ✅ PAGINACIÓN */}
+        {/* PAGINACIÓN */}
         {!loading && productosFiltrados.length > 0 && (
           <Paginacion
             paginaActual={paginaActual}
@@ -345,7 +354,189 @@ export default function ProductosPage() {
   );
 }
 
-// ==================== COMPONENTES AUXILIARES ====================
+// ==================== COMPONENTES DE GRÁFICOS EJECUTIVOS ====================
+
+function GraficoTendenciaEjecutiva({ data }: { data: TendenciaItem[] }) {
+  const formatPEN = (val: number) => {
+    return `S/ ${val.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  return (
+    <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm lg:col-span-2 flex flex-col justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+        <div>
+          <h2 className="text-sm font-extrabold text-slate-900 tracking-tight">
+            Tendencia de Ingresos y Cobranzas (2026)
+          </h2>
+          <p className="text-[11px] text-slate-400 mt-0.5">
+            Comparativa mensual acumulada en Soles (Ene - Oct)
+          </p>
+        </div>
+
+        <div className="flex items-center gap-4 text-xs">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-sm bg-[#065f46]"></span>
+            <span className="text-slate-700 text-[11px] font-semibold">Ventas Netas</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-sm bg-[#1d4ed8]"></span>
+            <span className="text-slate-700 text-[11px] font-semibold">Cobranzas Efectivas</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="h-64 w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data} margin={{ top: 12, right: 12, left: -18, bottom: 0 }}>
+            <defs>
+              <linearGradient id="gradienteVentas" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
+                <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
+              </linearGradient>
+              <linearGradient id="gradienteCobranzas" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.20} />
+                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.0} />
+              </linearGradient>
+            </defs>
+
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+            
+            <XAxis
+              dataKey="mes"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 11, fill: "#64748b" }}
+              dy={6}
+            />
+            
+            <YAxis
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 11, fill: "#64748b" }}
+              domain={[0, 200000]}
+              ticks={[0, 50000, 100000, 150000, 200000]}
+              tickFormatter={(val) => `${val === 0 ? "0k" : val / 1000 + "k"}`}
+            />
+            
+            <Tooltip
+              formatter={(val: unknown) => [formatPEN(Number(val) || 0), ""]}
+              contentStyle={{
+                backgroundColor: "#ffffff",
+                borderRadius: "12px",
+                border: "1px solid #e2e8f0",
+                boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.07)",
+                fontSize: "12px",
+              }}
+            />
+
+            <Area
+              type="monotone"
+              dataKey="cobranzas"
+              stroke="#1d4ed8"
+              strokeWidth={2.5}
+              fill="url(#gradienteCobranzas)"
+              fillOpacity={1}
+              dot={false}
+              activeDot={{ r: 5, strokeWidth: 2, stroke: "#ffffff", fill: "#1d4ed8" }}
+            />
+
+            <Area
+              type="monotone"
+              dataKey="ventas"
+              stroke="#065f46"
+              strokeWidth={2.5}
+              fill="url(#gradienteVentas)"
+              fillOpacity={1}
+              dot={{ r: 3, strokeWidth: 1.5, stroke: "#ffffff", fill: "#065f46" }}
+              activeDot={{ r: 5, strokeWidth: 2, stroke: "#ffffff", fill: "#065f46" }}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
+function GraficoCarteraEjecutiva({ data, totalMes }: { data: CarteraItem[]; totalMes: number }) {
+  const formatPEN = (val: number) => {
+    return `S/ ${val.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  return (
+    <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
+      <div>
+        <h2 className="text-sm font-extrabold text-slate-900 tracking-tight">
+          Distribución de Cartera
+        </h2>
+        <p className="text-[11px] text-slate-400 mt-0.5">
+          Participación según canal de venta
+        </p>
+      </div>
+
+      <div className="relative h-48 w-full flex items-center justify-center my-1">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={data}
+              innerRadius={65}
+              outerRadius={92}
+              startAngle={90}
+              endAngle={-270}
+              paddingAngle={2.5}
+              dataKey="montoTotal"
+              stroke="none"
+            >
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.colorHex} />
+              ))}
+            </Pie>
+            <Tooltip
+              formatter={(val: unknown) => formatPEN(Number(val) || 0)}
+              contentStyle={{
+                backgroundColor: "#ffffff",
+                borderRadius: "10px",
+                border: "1px solid #e2e8f0",
+                fontSize: "11px",
+              }}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">TOTAL MES</span>
+          <span className="text-xl font-black text-slate-900 tracking-tight">
+            S/ {(totalMes / 1000).toFixed(1)}K
+          </span>
+          <span className="text-[9px] font-medium text-slate-400">100% Ejecutado</span>
+        </div>
+      </div>
+
+      <div className="space-y-2.5 pt-3 border-t border-slate-100">
+        {data.map((item, idx) => (
+          <div key={idx} className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2">
+              <span
+                className="w-2.5 h-2.5 rounded-full shrink-0"
+                style={{ backgroundColor: item.colorHex }}
+              ></span>
+              <span className="text-slate-600 text-[11px] font-medium truncate max-w-[130px]">
+                {item.canal}
+              </span>
+            </div>
+            <div className="text-[11px] flex items-center gap-2">
+              <span className="font-bold text-slate-900">{item.porcentaje}%</span>
+              <span className="text-slate-400 font-medium w-16 text-right">
+                S/ {(item.montoTotal / 1000).toFixed(1)}K
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ==================== COMPONENTES AUXILIARES DE TABLA ====================
 
 function Paginacion({
   paginaActual,
@@ -366,7 +557,6 @@ function Paginacion({
   onCambiarPagina: (p: number) => void;
   onCambiarItemsPorPagina: (n: number) => void;
 }) {
-  // Calcular páginas visibles con elipsis
   const paginasVisibles = useMemo(() => {
     const paginas: (number | string)[] = [];
     const maxVisible = 5;
@@ -395,8 +585,6 @@ function Paginacion({
 
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-3 bg-gray-50 border-t border-gray-200">
-      
-      {/* Info + Selector */}
       <div className="flex items-center gap-4 text-xs text-gray-600">
         <span>
           Mostrando <span className="font-bold text-slate-900">{indiceInicio + 1}</span> -{" "}
@@ -421,7 +609,6 @@ function Paginacion({
         </div>
       </div>
 
-      {/* Navegación */}
       <div className="flex items-center gap-1">
         <button
           onClick={() => onCambiarPagina(1)}
@@ -506,129 +693,6 @@ function KPICard({
         <h3 className={`text-2xl font-bold ${valorColor || "text-slate-900"}`}>{valor}</h3>
       </div>
       <div className={`p-3 rounded-lg ${colores[color]}`}>{icono}</div>
-    </div>
-  );
-}
-
-function GraficoDonut({ data, totalProductos }: { data: { name: string; value: number }[]; totalProductos: number }) {
-  return (
-    <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <div className="p-2 rounded-lg bg-emerald-100">
-            <Building2 className="h-4 w-4 text-emerald-600" />
-          </div>
-          <div>
-            <h4 className="text-sm font-bold text-slate-900">Distribución por Importadora</h4>
-            <p className="text-[11px] text-gray-400">Productos agrupados por proveedor</p>
-          </div>
-        </div>
-        <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
-          {totalProductos} total
-        </span>
-      </div>
-
-      <div className="flex items-center gap-4">
-        <div className="h-56 w-56 shrink-0 relative">
-          {data.length === 0 ? (
-            <div className="h-full flex items-center justify-center text-xs text-slate-400 italic">Sin datos</div>
-          ) : (
-            <>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={data} cx="50%" cy="50%" innerRadius={60} outerRadius={95} paddingAngle={3} dataKey="value">
-                    {data.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORES_GRAFICO[index % COLORES_GRAFICO.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: "8px",
-                      border: "1px solid #e5e7eb",
-                      fontSize: "12px",
-                      boxShadow: "0 4px 6px rgba(0,0,0,0.05)",
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <p className="text-2xl font-bold text-slate-900">{totalProductos}</p>
-                <p className="text-[10px] text-gray-400 uppercase">Productos</p>
-              </div>
-            </>
-          )}
-        </div>
-
-        <div className="flex-1 space-y-2 overflow-y-auto max-h-56">
-          {data.map((item, idx) => {
-            const porcentaje = ((item.value / totalProductos) * 100).toFixed(1);
-            return (
-              <div key={idx} className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <div
-                    className="w-3 h-3 rounded-full shrink-0"
-                    style={{ backgroundColor: COLORES_GRAFICO[idx % COLORES_GRAFICO.length] }}
-                  />
-                  <span className="text-xs text-gray-700 truncate">{item.name}</span>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs font-bold text-slate-900">{item.value}</p>
-                  <p className="text-[10px] text-gray-400">{porcentaje}%</p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function GraficoStockBajo({ data }: { data: { nombre: string; stock: number }[] }) {
-  return (
-    <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <div className="p-2 rounded-lg bg-amber-100">
-            <AlertTriangle className="h-4 w-4 text-amber-600" />
-          </div>
-          <div>
-            <h4 className="text-sm font-bold text-slate-900">Top 5 Menor Stock</h4>
-            <p className="text-[11px] text-gray-400">Productos que requieren reposición</p>
-          </div>
-        </div>
-        <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-full">Alerta</span>
-      </div>
-
-      <div className="h-56 w-full">
-        {data.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-xs text-slate-400 italic">
-            Sin productos con stock bajo
-          </div>
-        ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} layout="vertical" margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
-              <XAxis type="number" stroke="#94a3b8" fontSize={11} />
-              <YAxis dataKey="nombre" type="category" width={120} tick={{ fontSize: 10, fill: "#64748b" }} />
-              <Tooltip
-                contentStyle={{
-                  borderRadius: "8px",
-                  border: "1px solid #e5e7eb",
-                  fontSize: "12px",
-                  boxShadow: "0 4px 6px rgba(0,0,0,0.05)",
-                }}
-                formatter={(value) => [`${value} unidades`, "Stock"]}
-              />
-              <Bar dataKey="stock" radius={[0, 8, 8, 0]}>
-                {data.map((entry, index) => {
-                  const color = entry.stock <= 3 ? "#ef4444" : entry.stock <= 8 ? "#f59e0b" : "#10b981";
-                  return <Cell key={`cell-${index}`} fill={color} />;
-                })}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        )}
-      </div>
     </div>
   );
 }
