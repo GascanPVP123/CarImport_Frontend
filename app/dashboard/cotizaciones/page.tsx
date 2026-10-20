@@ -163,9 +163,9 @@ export default function CotizacionesPage() {
       const saved = localStorage.getItem("carrito");
       return saved ? JSON.parse(saved) : [];
     }
-    return [];
+    return [];    
   });
-
+ 
   const [loading, setLoading] = useState(false);
   const [mostrarModal, setMostrarModal] = useState(false);
   const [datosConfirmacion, setDatosConfirmacion] = useState<{
