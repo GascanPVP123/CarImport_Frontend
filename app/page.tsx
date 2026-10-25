@@ -7,13 +7,8 @@ export default function RootPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-
-    if (token) {
-      router.replace('/dashboard');
-    } else {
-      router.replace('/login');
-    }
+    // Redirige siempre a la vista de login
+    router.replace('/login');
   }, [router]);
 
   return (
