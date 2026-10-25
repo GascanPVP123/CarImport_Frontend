@@ -133,31 +133,6 @@ export default function DashboardEjecutivo() {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] p-7 font-sans text-slate-800">
-      <div className="flex justify-between items-center mb-6">
-        <div className="relative w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Buscar producto, cliente..."
-            className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-sm transition-all"
-          />
-        </div>
-        <div className="flex items-center gap-4">
-          <button className="relative p-2 text-slate-400 hover:text-slate-600 hover:bg-white rounded-full transition-colors">
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full"></span>
-          </button>
-          <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
-            <div className="w-9 h-9 rounded-full bg-emerald-700 text-white flex items-center justify-center font-bold text-xs shadow-inner">
-              AJ
-            </div>
-            <div className="text-left text-xs leading-tight">
-              <p className="font-bold text-slate-800">Admin</p>
-              <p className="text-[11px] text-slate-400">Gerente</p>
-            </div>
-          </div>
-        </div>
-      </div>
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>

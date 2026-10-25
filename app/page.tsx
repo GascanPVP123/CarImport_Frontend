@@ -7,7 +7,6 @@ export default function RootPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirige siempre a la vista de login
     router.replace('/login');
   }, [router]);
 
