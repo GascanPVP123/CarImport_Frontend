@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://carimport-backend-efi4.onrender.com/api/v1";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://carimport-backend-efi4.onrender.com/api";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
 
