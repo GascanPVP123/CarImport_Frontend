@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://carimport-backend-e9fx.onrender.com/api/v1";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://carimport-backend-efi4.onrender.com/api/v1";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
 
@@ -41,22 +41,33 @@ export async function apiRequest<T>(endpoint: string, options: RequestOptions): 
       throw new Error("Sesión expirada o permisos insuficientes");
     }
 
-    if (!response.ok) {
-      let errorMessage = "Error en la petición";
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData.message || errorData.error || errorMessage;
-      } catch {
-        errorMessage = (await response.text()) || errorMessage;
-      }
-      throw new Error(errorMessage);
-    }
-
     if (response.status === 204) {
       return undefined as T;
     }
 
-    return await response.json();
+    // CORRECCIÓN CLAVE: Leer el stream UNA SOLA VEZ como texto plano
+    const rawText = await response.text();
+    let data: any = null;
+
+    if (rawText) {
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        data = rawText; // Si no era JSON (ej: HTML de error), lo guarda como texto
+      }
+    }
+
+    if (!response.ok) {
+      let errorMessage = "Error en la petición";
+      if (typeof data === "object" && data !== null) {
+        errorMessage = data.message || data.error || errorMessage;
+      } else if (typeof data === "string" && data.trim().length > 0) {
+        errorMessage = data;
+      }
+      throw new Error(errorMessage);
+    }
+
+    return data as T;
     
   } catch (error) {
     console.error(`[API Error] Falló la petición a ${path}:`, error);
